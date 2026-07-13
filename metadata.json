@@ -1,0 +1,6 @@
+{
+  "name": "Invoice & Quotation Manager",
+  "description": "A professional tool for managing clients, quotations, invoices, and payments with clean visual dashboards and reporting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,235 @@
+import React, { useState } from 'react';
+import { AdminSettings } from '../types';
+import { Save, Settings, Landmark, FileText, CheckCircle } from 'lucide-react';
+
+interface AdminSettingsProps {
+  settings: AdminSettings;
+  onSave: (settings: AdminSettings) => void;
+}
+
+export default function AdminSettingsPanel({ settings, onSave }: AdminSettingsProps) {
+  const [formData, setFormData] = useState<AdminSettings>({ ...settings });
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'taxRate' ? parseFloat(value) || 0 : value,
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  };
+
+  return (
+    <div id="admin-settings-container" className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-800">Admin Settings</h1>
+          <p className="text-sm text-slate-500">Configure your business profile, bank details, and invoice prefixes.</p>
+        </div>
+        {saveSuccess && (
+          <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg border border-emerald-100 text-sm animate-fade-in">
+            <CheckCircle className="w-4 h-4" />
+            <span>Settings updated successfully</span>
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Company Profile */}
+        <div className="bg-white rounded-xl border border-slate-100 p-6 space-y-4">
+          <div className="flex items-center gap-2 text-slate-800 font-medium border-b border-slate-50 pb-3">
+            <Settings className="w-5 h-5 text-slate-400" />
+            <span>Company Profile</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Company Name</label>
+              <input
+                type="text"
+                name="companyName"
+                value={formData.companyName}
+                onChange={handleChange}
+                required
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Email Address</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Phone Number</label>
+              <input
+                type="text"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                required
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Company Address</label>
+              <textarea
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                required
+                rows={3}
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Logo URL (Optional)</label>
+              <input
+                type="text"
+                name="logoUrl"
+                value={formData.logoUrl || ''}
+                onChange={handleChange}
+                placeholder="https://example.com/logo.png"
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <p className="text-xxs text-slate-400 mt-1">Provide a URL to show your custom business logo on the invoice PDFs.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bank & Payment Details */}
+        <div className="bg-white rounded-xl border border-slate-100 p-6 space-y-4">
+          <div className="flex items-center gap-2 text-slate-800 font-medium border-b border-slate-50 pb-3">
+            <Landmark className="w-5 h-5 text-slate-400" />
+            <span>Bank & UPI Details</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Bank Name</label>
+              <input
+                type="text"
+                name="bankName"
+                value={formData.bankName}
+                onChange={handleChange}
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Account Number</label>
+              <input
+                type="text"
+                name="bankAccount"
+                value={formData.bankAccount}
+                onChange={handleChange}
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">IFSC / Routing Code</label>
+              <input
+                type="text"
+                name="bankIfsc"
+                value={formData.bankIfsc}
+                onChange={handleChange}
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">UPI ID (Fast Payments)</label>
+              <input
+                type="text"
+                name="upiId"
+                value={formData.upiId}
+                onChange={handleChange}
+                placeholder="e.g. company@upi"
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">GPay Number</label>
+              <input
+                type="text"
+                name="gpayNumber"
+                value={formData.gpayNumber || ''}
+                onChange={handleChange}
+                placeholder="e.g. 9876543210"
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Prefix & Taxation */}
+        <div className="bg-white rounded-xl border border-slate-100 p-6 space-y-4">
+          <div className="flex items-center gap-2 text-slate-800 font-medium border-b border-slate-50 pb-3">
+            <FileText className="w-5 h-5 text-slate-400" />
+            <span>Document & Tax Configurations</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Invoice Prefix</label>
+              <input
+                type="text"
+                name="invoicePrefix"
+                value={formData.invoicePrefix}
+                onChange={handleChange}
+                required
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Quotation Prefix</label>
+              <input
+                type="text"
+                name="quotationPrefix"
+                value={formData.quotationPrefix}
+                onChange={handleChange}
+                required
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+
+          </div>
+        </div>
+
+        {/* Action Button */}
+        <div className="flex justify-end pt-2">
+          <button
+            type="submit"
+            id="save-settings-btn"
+            className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition shadow-sm cursor-pointer"
+          >
+            <Save className="w-4 h-4" />
+            <span>Save Settings</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
