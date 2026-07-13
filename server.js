@@ -520,12 +520,10 @@ app.post('/api/bulk-init', async (req, res) => {
   res.json({ success: true, message: 'Not implemented' });
 });
 
-// Serve static frontend in production
-app.use(express.static(path.join(__dirname, 'dist')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+  });
+}
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
-});
+export default app;
