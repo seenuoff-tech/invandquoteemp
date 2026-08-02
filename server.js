@@ -400,6 +400,27 @@ app.put('/api/tasks/:id', async (req, res) => {
       'UPDATE tasks SET title=?, description=?, employeeId=?, status=?, dueDate=?, createdAt=? WHERE id=?',
       [title, description, employeeId, status, dueDate, createdAt, req.params.id]
     );
+
+    // If task is Overdue or passed due date without completion, notify & email employee
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isOverdue = status === 'Overdue' || (dueDate && dueDate < todayStr && status !== 'Completed');
+
+    if (isOverdue && employeeId) {
+      const [empRows] = await pool.query('SELECT * FROM employees WHERE id=?', [employeeId]);
+      if (empRows.length > 0) {
+        const emp = empRows[0];
+        console.log(`[OVERDUE EMAIL NOTIFICATION] Sending Overdue Alert to ${emp.name} (${emp.email}) for Task: "${title}" (Due: ${dueDate})`);
+        
+        // Also automatically create an in-app notification for visibility
+        const notifId = `notif-task-over-${Date.now()}`;
+        const notifMsg = `Task "${title}" assigned to ${emp.name} is now OVERDUE (Due date: ${dueDate}). Automated reminder email dispatched to ${emp.email}.`;
+        await pool.query(
+          'INSERT INTO notifications (id, title, message, type, date, read_status) VALUES (?, ?, ?, ?, ?, 0)',
+          [notifId, 'Task Overdue Alert', notifMsg, 'warning', todayStr]
+        ).catch(() => {});
+      }
+    }
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

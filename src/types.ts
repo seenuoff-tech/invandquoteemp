@@ -28,6 +28,8 @@ export interface Quotation {
   validUntil: string;
   items: LineItem[];
   subtotal: number;
+  taxRate?: number;
+  taxAmount?: number;
   grandTotal: number;
   notes?: string;
   terms?: string;
@@ -53,6 +55,8 @@ export interface Invoice {
   dueDate: string;
   items: LineItem[];
   subtotal: number;
+  taxRate?: number;
+  taxAmount?: number;
   grandTotal: number;
   paidAmount: number;
   balance: number;
@@ -107,7 +111,7 @@ export interface Task {
   title: string;
   description: string;
   employeeId: string;
-  status: 'To Do' | 'In Progress' | 'Completed';
+  status: 'To Do' | 'In Progress' | 'Completed' | 'Overdue';
   dueDate: string;
   createdAt: string;
 }

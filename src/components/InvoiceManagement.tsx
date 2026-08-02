@@ -202,25 +202,19 @@ export default function InvoiceManagement({
       payments: editingInvoice ? editingInvoice.payments : [],
     };
 
-    // Auto-adjust status based on balance if editing status directly
+    // Calculate status: respect explicit user choice if valid, or compute based on paid amount & due date
     if (editingInvoice) {
       if (invoiceData.balance <= 0) {
         invoiceData.status = 'Paid';
         invoiceData.balance = 0;
       } else if (invoiceData.paidAmount > 0) {
-        invoiceData.status = 'Partially Paid';
+        invoiceData.status = status === 'Paid' ? 'Partially Paid' : status;
       } else {
-        // If due date has passed relative to today, set Overdue
-        const today = new Date().toISOString().split('T')[0];
-        if (invoiceData.dueDate < today) {
-          invoiceData.status = 'Overdue';
-        } else {
-          invoiceData.status = 'Unpaid';
-        }
+        invoiceData.status = status;
       }
     } else {
       const today = new Date().toISOString().split('T')[0];
-      if (invoiceData.dueDate < today) {
+      if (invoiceData.dueDate < today && invoiceData.status === 'Unpaid') {
         invoiceData.status = 'Overdue';
       }
     }
@@ -448,9 +442,19 @@ export default function InvoiceManagement({
                             )}
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className={`px-2 py-0.5 rounded-full text-xxs font-semibold border ${statusColors[inv.status] || ''}`}>
-                              {inv.status}
-                            </span>
+                            <select
+                              value={inv.status}
+                              onChange={(e) => {
+                                const newStatus = e.target.value as InvoiceStatus;
+                                onUpdateInvoice({ ...inv, status: newStatus });
+                              }}
+                              className={`px-2 py-1 rounded-full text-xxs font-semibold border outline-none cursor-pointer ${statusColors[inv.status] || ''}`}
+                            >
+                              <option value="Unpaid">Unpaid</option>
+                              <option value="Partially Paid">Partially Paid</option>
+                              <option value="Paid">Paid</option>
+                              <option value="Overdue">Overdue</option>
+                            </select>
                           </td>
                           <td className="py-3.5 px-4 text-center">
                             <div className="flex items-center justify-center gap-1">

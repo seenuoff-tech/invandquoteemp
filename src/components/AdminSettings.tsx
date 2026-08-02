@@ -11,6 +11,10 @@ export default function AdminSettingsPanel({ settings, onSave }: AdminSettingsPr
   const [formData, setFormData] = useState<AdminSettings>({ ...settings });
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  React.useEffect(() => {
+    setFormData({ ...settings });
+  }, [settings]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -19,11 +23,16 @@ export default function AdminSettingsPanel({ settings, onSave }: AdminSettingsPr
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    try {
+      await onSave(formData);
+      setSaveSuccess(true);
+      alert('Saved Successful');
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      alert('Failed to save settings: ' + (err.message || String(err)));
+    }
   };
 
   return (

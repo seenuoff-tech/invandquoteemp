@@ -367,7 +367,6 @@ export default function CustomerManagement({
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. John Doe"
                     className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
@@ -378,7 +377,6 @@ export default function CustomerManagement({
                     type="text"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Acme Corporation"
                     className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
@@ -390,7 +388,6 @@ export default function CustomerManagement({
                     required
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value)}
-                    placeholder="e.g. +1 (555) 123-4567"
                     className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
@@ -402,40 +399,20 @@ export default function CustomerManagement({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. john@acme.com"
                     className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider">Billing Address *</label>
-                    <button
-                      type="button"
-                      onClick={handleCopyBillingToShipping}
-                      className="text-xs text-indigo-600 hover:text-indigo-800 transition font-medium"
-                    >
-                      Copy to Shipping Address
-                    </button>
-                  </div>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Customer Address *</label>
                   <textarea
                     required
-                    rows={2}
+                    rows={3}
                     value={billingAddress}
-                    onChange={(e) => setBillingAddress(e.target.value)}
-                    placeholder="Complete billing address..."
-                    className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Shipping Address *</label>
-                  <textarea
-                    required
-                    rows={2}
-                    value={shippingAddress}
-                    onChange={(e) => setShippingAddress(e.target.value)}
-                    placeholder="Complete shipping address..."
+                    onChange={(e) => {
+                      setBillingAddress(e.target.value);
+                      setShippingAddress(e.target.value);
+                    }}
                     className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
@@ -446,7 +423,6 @@ export default function CustomerManagement({
                     type="text"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="e.g. Preferences, payment agreements..."
                     className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>

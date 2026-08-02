@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Invoice, Customer } from '../types';
-import { Clock, CheckCircle, Calendar, ArrowDownRight, ArrowUpRight, IndianRupee, ListFilter } from 'lucide-react';
+import { Clock, CheckCircle, Calendar, ArrowDownRight, ArrowUpRight, IndianRupee, Filter } from 'lucide-react';
 
 interface PaymentTrackingProps {
   invoices: Invoice[];
@@ -7,16 +8,27 @@ interface PaymentTrackingProps {
 }
 
 export default function PaymentTracking({ invoices, customers }: PaymentTrackingProps) {
-  const currentTodayStr = '2026-06-24'; // System baseline date
-  const currentMonthStr = '2026-06';   // June 2026
+  const now = new Date();
+  const currentTodayStr = now.toISOString().split('T')[0];
+  
+  const [selectedMonth, setSelectedMonth] = useState<string>(String(now.getMonth() + 1).padStart(2, '0'));
+  const [selectedYear, setSelectedYear] = useState<string>(String(now.getFullYear()));
+
+  const filterMonthStr = `${selectedYear}-${selectedMonth}`; // e.g. "2026-08"
+  
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  
+  const selectedMonthName = `${monthNames[parseInt(selectedMonth, 10) - 1]} ${selectedYear}`;
 
   // 1. Upcoming Payments: Invoices with status !== 'Paid' where due date is >= today, or status 'Unpaid'/'Partially Paid' and due date hasn't been breached.
-  // Wait, let's look at the requirement: "Show invoices with due date not reached and unpaid."
   const upcomingInvoices = invoices.filter((inv) => {
     return inv.status !== 'Paid' && inv.status !== 'Overdue' && inv.dueDate >= currentTodayStr;
   });
 
-  // Calculate days left relative to June 24, 2026
+  // Calculate days left relative to current today
   const getDaysLeft = (dueDateStr: string) => {
     const due = new Date(dueDateStr);
     const today = new Date(currentTodayStr);
@@ -28,8 +40,8 @@ export default function PaymentTracking({ invoices, customers }: PaymentTracking
   // 2. Completed Payments: Fully paid invoices.
   const completedInvoices = invoices.filter((inv) => inv.status === 'Paid');
 
-  // Gather all payments that occurred in the current month (June 2026) across ALL invoices
-  const thisMonthPayments: Array<{
+  // Gather all payments that occurred in the filtered month/year across ALL invoices
+  const filteredMonthPayments: Array<{
     id: string;
     invoiceNumber: string;
     customerName: string;
@@ -38,7 +50,7 @@ export default function PaymentTracking({ invoices, customers }: PaymentTracking
     method: string;
   }> = [];
 
-  let totalReceivedThisMonth = 0;
+  let totalReceivedFilteredMonth = 0;
   let pendingAmountOverall = 0;
 
   invoices.forEach((inv) => {
@@ -46,43 +58,98 @@ export default function PaymentTracking({ invoices, customers }: PaymentTracking
     pendingAmountOverall += inv.balance;
 
     const cust = customers.find((c) => c.id === inv.customerId);
-    inv.payments.forEach((p) => {
-      if (p.date.startsWith(currentMonthStr)) {
-        totalReceivedThisMonth += p.amount;
-        thisMonthPayments.push({
-          id: p.id,
-          invoiceNumber: inv.number,
-          customerName: cust?.name || 'Unknown Client',
-          amount: p.amount,
-          date: p.date,
-          method: p.method,
-        });
-      }
-    });
+
+    if (inv.payments && inv.payments.length > 0) {
+      inv.payments.forEach((p) => {
+        if (p.date && p.date.startsWith(filterMonthStr)) {
+          totalReceivedFilteredMonth += p.amount;
+          filteredMonthPayments.push({
+            id: p.id,
+            invoiceNumber: inv.number,
+            customerName: cust?.name || 'Unknown Client',
+            amount: p.amount,
+            date: p.date,
+            method: p.method,
+          });
+        }
+      });
+    } else if (inv.paidAmount > 0 && inv.date && inv.date.startsWith(filterMonthStr)) {
+      // Fallback: If paidAmount > 0 but payments log array is empty or lacks dates
+      totalReceivedFilteredMonth += inv.paidAmount;
+      filteredMonthPayments.push({
+        id: `pay-${inv.id}`,
+        invoiceNumber: inv.number,
+        customerName: cust?.name || 'Unknown Client',
+        amount: inv.paidAmount,
+        date: inv.date,
+        method: 'Bank Transfer',
+      });
+    }
   });
 
-  const numPaymentsThisMonth = thisMonthPayments.length;
+  const numPaymentsFilteredMonth = filteredMonthPayments.length;
 
   return (
     <div id="payment-tracking-container" className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-800">Payment & Collection Tracking</h1>
-        <p className="text-sm text-slate-500">Track incoming invoices, verify bank receipt settlements, and audit this month's collections.</p>
+      {/* Header with Filter Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-100">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-800">Payment & Collection Tracking</h1>
+          <p className="text-sm text-slate-500">Track incoming invoices, verify bank receipt settlements, and audit collections by month & year.</p>
+        </div>
+
+        {/* Month & Year Filter Bar */}
+        <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-xs self-start sm:self-auto">
+          <Filter className="w-4 h-4 text-indigo-500 ml-1" />
+          <span className="text-xs font-bold text-slate-600">Filter:</span>
+          
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+          >
+            <option value="01">January</option>
+            <option value="02">February</option>
+            <option value="03">March</option>
+            <option value="04">April</option>
+            <option value="05">May</option>
+            <option value="06">June</option>
+            <option value="07">July</option>
+            <option value="08">August</option>
+            <option value="09">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+          </select>
+
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+          >
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+            <option value="2028">2028</option>
+          </select>
+        </div>
       </div>
 
-      {/* Metrics Row for This Month Payments */}
+      {/* Metrics Row for Filtered Month Payments */}
       <div className="bg-slate-50 rounded-xl border border-slate-100 p-5 space-y-4">
-        <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm border-b border-slate-200/60 pb-2">
-          <Calendar className="w-4.5 h-4.5 text-indigo-500" />
-          <span>June 2026 Collection Summary</span>
+        <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
+          <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm">
+            <Calendar className="w-4.5 h-4.5 text-indigo-500" />
+            <span>{selectedMonthName} Collection Summary</span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white p-4 rounded-lg border border-slate-100 flex items-center justify-between">
             <div>
-              <p className="text-xxs font-bold text-slate-400 uppercase tracking-wider">Total Received (This Month)</p>
-              <p className="text-xl font-extrabold text-emerald-600 mt-1">₹{totalReceivedThisMonth.toFixed(2)}</p>
+              <p className="text-xxs font-bold text-slate-400 uppercase tracking-wider">Total Received ({selectedMonthName})</p>
+              <p className="text-xl font-extrabold text-emerald-600 mt-1">₹{totalReceivedFilteredMonth.toFixed(2)}</p>
             </div>
             <div className="p-2 bg-emerald-50 rounded-full text-emerald-500">
               <ArrowDownRight className="w-5 h-5" />
@@ -92,7 +159,7 @@ export default function PaymentTracking({ invoices, customers }: PaymentTracking
           <div className="bg-white p-4 rounded-lg border border-slate-100 flex items-center justify-between">
             <div>
               <p className="text-xxs font-bold text-slate-400 uppercase tracking-wider">Number of Payments Recd</p>
-              <p className="text-xl font-extrabold text-slate-800 mt-1">{numPaymentsThisMonth}</p>
+              <p className="text-xl font-extrabold text-slate-800 mt-1">{numPaymentsFilteredMonth}</p>
             </div>
             <div className="p-2 bg-indigo-50 rounded-full text-indigo-500">
               <Clock className="w-5 h-5" />
@@ -228,12 +295,12 @@ export default function PaymentTracking({ invoices, customers }: PaymentTracking
         </div>
       </div>
 
-      {/* Ledger 3: June 2026 Collection Log */}
+      {/* Ledger 3: Received Payments Log */}
       <div className="bg-white rounded-xl border border-slate-100 p-5 space-y-4 shadow-xxs">
         <div className="flex items-center justify-between border-b border-slate-50 pb-2">
           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-indigo-500" />
-            <span>June 2026 Received Payments Log</span>
+            <span>{selectedMonthName} Received Payments Log</span>
           </h3>
           <span className="text-xxs text-slate-400 font-medium">Real-time collections</span>
         </div>
@@ -250,14 +317,14 @@ export default function PaymentTracking({ invoices, customers }: PaymentTracking
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {thisMonthPayments.length === 0 ? (
+              {filteredMonthPayments.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-8 text-slate-400">
-                    No payment collections logged during this month of June 2026.
+                    No payment collections logged during {selectedMonthName}.
                   </td>
                 </tr>
               ) : (
-                thisMonthPayments.map((p) => (
+                filteredMonthPayments.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50/50 transition">
                     <td className="py-2.5 font-medium text-slate-600">{p.date}</td>
                     <td className="py-2.5 font-bold text-slate-800">{p.invoiceNumber}</td>

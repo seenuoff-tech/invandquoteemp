@@ -48,15 +48,16 @@ export const initialCustomers: Customer[] = [
 ];
 
 export const defaultSettings: AdminSettings = {
-  companyName: 'Vertex Solutions Ltd',
-  logoUrl: '', // Will use a clean CSS/Text logo or placeholder
+  companyName: 'Skenetic Digital',
+  logoUrl: '/logo.png',
   address: '77 Innovation Blvd, Tech Park, Austin, TX 78701',
   phone: '+1 (555) 800-VRTX',
-  email: 'finance@vertexsolutions.com',
+  email: 'finance@skeneticdigital.com',
   bankName: 'Silicon Valley Trust',
   bankAccount: '987654321098',
   bankIfsc: 'SVT0001234',
-  upiId: 'vertexsolutions@svt',
+  upiId: 'skenetic@svt',
+  gpayNumber: '9876543210',
   invoicePrefix: 'INV',
   quotationPrefix: 'QUO'
 };

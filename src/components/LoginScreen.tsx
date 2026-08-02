@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Employee } from '../types';
-import { Lock, User, Loader2 } from 'lucide-react';
+import { Lock, User, Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface Props {
   onLoginSuccess: (user: Employee) => void;
@@ -9,8 +9,10 @@ interface Props {
 export default function LoginScreen({ onLoginSuccess }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const logoImg = '/logo.png';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,10 +43,10 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in">
-        <div className="p-8 pb-6 text-center border-b border-slate-100 bg-slate-950">
-          <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center text-white font-black text-xl mx-auto mb-4">V</div>
-          <h2 className="text-xl font-extrabold text-white tracking-tight">Skenetic Digital</h2>
-          <p className="text-slate-400 text-sm mt-1">Sign in to your account</p>
+        <div className="p-8 pb-4 text-center border-b border-slate-100 bg-white flex flex-col items-center justify-center">
+          <div className="flex items-center justify-center">
+            <img src={logoImg} alt="Skenetic Digital Logo" className="h-16 w-auto object-contain" />
+          </div>
         </div>
         
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
@@ -80,12 +82,20 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
                 </div>
                 <input
                   required
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition"
+                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
             </div>
           </div>
@@ -93,7 +103,7 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition cursor-pointer"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign In'}
           </button>

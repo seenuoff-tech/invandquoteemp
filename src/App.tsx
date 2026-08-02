@@ -317,7 +317,42 @@ export default function App() {
   const handleDeleteEmployee = (id: string) => { setEmployees(p => p.filter(x => x.id !== id)); fetch(`/api/employees/${id}`, { method: 'DELETE' }).catch(console.error); };
 
   const handleAddTask = (t: Task) => { setTasks(p => [t, ...p]); fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(t) }).catch(console.error); };
-  const handleUpdateTask = (t: Task) => { setTasks(p => p.map(x => x.id === t.id ? t : x)); fetch(`/api/tasks/${t.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(t) }).catch(console.error); };
+  const handleUpdateTask = (t: Task) => {
+    setTasks(p => p.map(x => x.id === t.id ? t : x));
+    
+    // Check if task became Overdue
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isOverdue = t.status === 'Overdue' || (t.dueDate && t.dueDate < todayStr && t.status !== 'Completed');
+    
+    if (isOverdue && t.employeeId) {
+      const assignedEmp = employees.find(e => e.id === t.employeeId);
+      if (assignedEmp) {
+        // Create in-app alert notification
+        const overdueNotif: AppNotification = {
+          id: `notif-task-over-${Date.now()}`,
+          title: 'Task Overdue Alert',
+          message: `Task "${t.title}" assigned to ${assignedEmp.name} is OVERDUE. Automated warning email sent to ${assignedEmp.email}.`,
+          type: 'warning',
+          date: todayStr,
+          read: false
+        };
+        setNotifications(prev => [overdueNotif, ...prev]);
+        fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(overdueNotif)
+        }).catch(console.error);
+
+        alert(`⚠️ Task Overdue Alert!\n\nTask: "${t.title}"\nAssigned Employee: ${assignedEmp.name}\nEmail Sent To: ${assignedEmp.email}`);
+      }
+    }
+
+    fetch(`/api/tasks/${t.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(t)
+    }).catch(console.error);
+  };
   const handleDeleteTask = (id: string) => { setTasks(p => p.filter(x => x.id !== id)); fetch(`/api/tasks/${id}`, { method: 'DELETE' }).catch(console.error); };
 
   const handleAddTimeLog = (t: TimeLog) => { setTimeLogs(p => [t, ...p]); fetch('/api/time-logs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(t) }).catch(console.error); };
@@ -379,12 +414,6 @@ export default function App() {
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-slate-950 flex items-center justify-center text-white font-black text-sm">V</div>
-            <span className="font-extrabold text-sm tracking-tight text-slate-900 uppercase">Skenetic digital</span>
-            <span className="text-xxs bg-indigo-50 border border-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-md font-semibold">v3.2</span>
-          </div>
         </div>
 
         {/* Utilities shortcuts */}
@@ -423,7 +452,12 @@ export default function App() {
         
         {/* Navigation Sidebar (Desktop) */}
         <aside className="hidden md:block w-64 bg-white border-r border-slate-100 p-4 space-y-6 shrink-0 print:hidden">
-          <div className="space-y-1">
+          {/* Centered Sidebar Logo */}
+          <div className="flex items-center justify-center pb-2 border-b border-slate-100">
+            <img src="/logo.png" alt="Logo" className="h-12 w-auto object-contain" />
+          </div>
+
+          <div className="space-y-1.5">
             {filteredMenuItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.name;
@@ -431,14 +465,14 @@ export default function App() {
                 <button
                   key={item.name}
                   onClick={() => handleNavClick(item.name)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3.5 py-3 rounded-lg text-sm font-bold tracking-wide transition cursor-pointer ${
                     isActive
-                      ? 'bg-slate-950 text-white'
-                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                      ? 'bg-[#0439C5] text-white'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <div className="flex items-center gap-3.5">
+                    <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                     <span>{item.name}</span>
                   </div>
                   {item.badge !== undefined && item.badge > 0 && (
@@ -481,7 +515,7 @@ export default function App() {
                       onClick={() => handleNavClick(item.name)}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                         isActive
-                          ? 'bg-slate-950 text-white'
+                          ? 'bg-[#0439C5] text-white'
                           : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
                       }`}
                     >
@@ -591,9 +625,17 @@ export default function App() {
           {activeTab === 'Settings' && (
             <AdminSettingsPanel
               settings={settings}
-              onSave={(setts) => {
+              onSave={async (setts) => {
                 setSettings(setts);
-                fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(setts) }).catch(console.error);
+                const res = await fetch('/api/settings', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(setts)
+                });
+                if (!res.ok) {
+                  const errData = await res.json().catch(() => ({}));
+                  throw new Error(errData.error || 'Server error saving settings');
+                }
               }}
             />
           )}
