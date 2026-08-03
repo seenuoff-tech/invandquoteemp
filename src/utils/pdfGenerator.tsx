@@ -54,50 +54,41 @@ export const generateDocumentPDF = async (
             useCORS: true, // Crucial for external logos
             backgroundColor: '#ffffff',
             windowWidth: 800,
+            ignoreElements: (element) => {
+              // Ignore any external stylesheets or head elements during render to prevent oklch color parsing errors
+              return element.tagName === 'LINK' && (element as HTMLLinkElement).rel === 'stylesheet';
+            },
             onclone: (clonedDoc) => {
-              // Strip or override oklch CSS variables and properties in cloned document
-              const styleEls = clonedDoc.querySelectorAll('style, link[rel="stylesheet"]');
-              styleEls.forEach((s) => {
+              // Strip or override all oklch and oklab CSS in ALL style tags & rules
+              Array.from(clonedDoc.querySelectorAll('style')).forEach((s) => {
                 try {
-                  if (s.tagName === 'STYLE') {
-                    s.innerHTML = s.innerHTML.replace(/oklch\([^)]+\)/g, '#1e293b');
-                  }
+                  s.innerHTML = s.innerHTML
+                    .replace(/oklch\([^)]+\)/gi, '#1e293b')
+                    .replace(/oklab\([^)]+\)/gi, '#1e293b');
                 } catch (e) {}
               });
 
+              // Clean up inline styles of all elements inside printable container
               const el = clonedDoc.querySelector('#invoice-printable-area') as HTMLElement;
               if (el) {
                 const allElements = el.querySelectorAll('*');
                 allElements.forEach((child) => {
                   const htmlChild = child as HTMLElement;
-                  // Explicitly set explicit hex colors on key template elements to prevent oklch parsing errors
-                  if (htmlChild.classList.contains('bg-blue-900')) {
-                    htmlChild.style.backgroundColor = '#1e3a8a';
+                  const styleAttr = htmlChild.getAttribute('style');
+                  if (styleAttr && (styleAttr.includes('oklch') || styleAttr.includes('oklab'))) {
+                    htmlChild.setAttribute('style', styleAttr.replace(/oklch\([^)]+\)/gi, '#1e293b').replace(/oklab\([^)]+\)/gi, '#1e293b'));
                   }
-                  if (htmlChild.classList.contains('bg-slate-50') || htmlChild.classList.contains('bg-slate-50/70')) {
-                    htmlChild.style.backgroundColor = '#f8fafc';
-                  }
-                  if (htmlChild.classList.contains('text-blue-900')) {
-                    htmlChild.style.color = '#1e3a8a';
-                  }
-                  if (htmlChild.classList.contains('text-slate-900')) {
-                    htmlChild.style.color = '#0f172a';
-                  }
-                  if (htmlChild.classList.contains('text-slate-700')) {
-                    htmlChild.style.color = '#334155';
-                  }
-                  if (htmlChild.classList.contains('text-slate-500')) {
-                    htmlChild.style.color = '#64748b';
-                  }
-                  if (htmlChild.classList.contains('text-emerald-700')) {
-                    htmlChild.style.color = '#047857';
-                  }
-                  if (htmlChild.classList.contains('text-rose-700')) {
-                    htmlChild.style.color = '#be123c';
-                  }
-                  if (htmlChild.classList.contains('border-slate-200') || htmlChild.classList.contains('border-slate-100')) {
-                    htmlChild.style.borderColor = '#e2e8f0';
-                  }
+
+                  // Force explicit hex colors for printable container elements
+                  if (htmlChild.classList.contains('bg-blue-900')) htmlChild.style.backgroundColor = '#1e3a8a';
+                  if (htmlChild.classList.contains('bg-slate-50') || htmlChild.classList.contains('bg-slate-50/70')) htmlChild.style.backgroundColor = '#f8fafc';
+                  if (htmlChild.classList.contains('text-blue-900')) htmlChild.style.color = '#1e3a8a';
+                  if (htmlChild.classList.contains('text-slate-900')) htmlChild.style.color = '#0f172a';
+                  if (htmlChild.classList.contains('text-slate-700')) htmlChild.style.color = '#334155';
+                  if (htmlChild.classList.contains('text-slate-500')) htmlChild.style.color = '#64748b';
+                  if (htmlChild.classList.contains('text-emerald-700')) htmlChild.style.color = '#047857';
+                  if (htmlChild.classList.contains('text-rose-700')) htmlChild.style.color = '#be123c';
+                  if (htmlChild.classList.contains('border-slate-200') || htmlChild.classList.contains('border-slate-100')) htmlChild.style.borderColor = '#e2e8f0';
                 });
               }
             }
