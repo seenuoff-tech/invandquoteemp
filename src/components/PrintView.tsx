@@ -121,8 +121,8 @@ export default function PrintView({ document, customers, settings, onClose }: Pr
         </div>
 
         {/* Professional Printable A4 Page Container */}
-        <div id="invoice-printable-area" className="flex-1 overflow-y-auto p-12 bg-white text-slate-900 font-['Times_New_Roman',_Times,_serif] font-bold print:p-0 print:overflow-visible">
-          <div className="max-w-[210mm] mx-auto space-y-8 bg-white print:max-w-none print:w-full">
+        <div id="invoice-printable-area" className="flex-1 overflow-y-auto p-8 bg-white text-slate-900 font-['Times_New_Roman',_Times,_serif] font-bold print:p-0 print:overflow-visible">
+          <div className="max-w-[210mm] mx-auto space-y-5 bg-white print:max-w-none print:w-full">
             
             {/* Header section: Logo & Document Title */}
             <div className="flex justify-between items-start pb-6 border-b border-slate-200">

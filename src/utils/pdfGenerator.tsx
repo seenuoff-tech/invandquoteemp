@@ -46,51 +46,26 @@ export const generateDocumentPDF = async (
           element.style.width = '800px'; 
           element.style.margin = '0';
           element.style.padding = '40px';
-          element.style.backgroundColor = 'white';
-          element.style.color = '#000';
+          element.style.backgroundColor = '#ffffff';
+          element.style.color = '#000000';
 
           const canvas = await html2canvas(element, {
             scale: 2, // Higher quality
             useCORS: true, // Crucial for external logos
             backgroundColor: '#ffffff',
             windowWidth: 800,
-            ignoreElements: (element) => {
-              // Ignore any external stylesheets or head elements during render to prevent oklch color parsing errors
-              return element.tagName === 'LINK' && (element as HTMLLinkElement).rel === 'stylesheet';
-            },
             onclone: (clonedDoc) => {
-              // Strip or override all oklch and oklab CSS in ALL style tags & rules
-              Array.from(clonedDoc.querySelectorAll('style')).forEach((s) => {
+              // Convert oklch & oklab colors to safe hex fallback across all stylesheets
+              const styleEls = clonedDoc.querySelectorAll('style, link[rel="stylesheet"]');
+              styleEls.forEach((s) => {
                 try {
-                  s.innerHTML = s.innerHTML
-                    .replace(/oklch\([^)]+\)/gi, '#1e293b')
-                    .replace(/oklab\([^)]+\)/gi, '#1e293b');
+                  if (s.tagName === 'STYLE') {
+                    s.innerHTML = s.innerHTML
+                      .replace(/oklch\([^)]+\)/gi, '#1e293b')
+                      .replace(/oklab\([^)]+\)/gi, '#1e293b');
+                  }
                 } catch (e) {}
               });
-
-              // Clean up inline styles of all elements inside printable container
-              const el = clonedDoc.querySelector('#invoice-printable-area') as HTMLElement;
-              if (el) {
-                const allElements = el.querySelectorAll('*');
-                allElements.forEach((child) => {
-                  const htmlChild = child as HTMLElement;
-                  const styleAttr = htmlChild.getAttribute('style');
-                  if (styleAttr && (styleAttr.includes('oklch') || styleAttr.includes('oklab'))) {
-                    htmlChild.setAttribute('style', styleAttr.replace(/oklch\([^)]+\)/gi, '#1e293b').replace(/oklab\([^)]+\)/gi, '#1e293b'));
-                  }
-
-                  // Force explicit hex colors for printable container elements
-                  if (htmlChild.classList.contains('bg-blue-900')) htmlChild.style.backgroundColor = '#1e3a8a';
-                  if (htmlChild.classList.contains('bg-slate-50') || htmlChild.classList.contains('bg-slate-50/70')) htmlChild.style.backgroundColor = '#f8fafc';
-                  if (htmlChild.classList.contains('text-blue-900')) htmlChild.style.color = '#1e3a8a';
-                  if (htmlChild.classList.contains('text-slate-900')) htmlChild.style.color = '#0f172a';
-                  if (htmlChild.classList.contains('text-slate-700')) htmlChild.style.color = '#334155';
-                  if (htmlChild.classList.contains('text-slate-500')) htmlChild.style.color = '#64748b';
-                  if (htmlChild.classList.contains('text-emerald-700')) htmlChild.style.color = '#047857';
-                  if (htmlChild.classList.contains('text-rose-700')) htmlChild.style.color = '#be123c';
-                  if (htmlChild.classList.contains('border-slate-200') || htmlChild.classList.contains('border-slate-100')) htmlChild.style.borderColor = '#e2e8f0';
-                });
-              }
             }
           });
 
@@ -106,22 +81,8 @@ export const generateDocumentPDF = async (
           const imgProps = pdf.getImageProperties(imgData);
           const pdfWidth = pdf.internal.pageSize.getWidth();
           const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-          const pageHeight = pdf.internal.pageSize.getHeight();
 
-          let heightLeft = pdfHeight;
-          let position = 0;
-
-          // Add first page
-          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-          heightLeft -= pageHeight;
-
-          // Add extra pages if content overflows A4 height
-          while (heightLeft > 0) {
-            position = heightLeft - pdfHeight;
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-            heightLeft -= pageHeight;
-          }
+          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
           
           const blob = pdf.output('blob');
           
