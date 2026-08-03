@@ -55,17 +55,46 @@ export const generateDocumentPDF = async (
             backgroundColor: '#ffffff',
             windowWidth: 800,
             onclone: (clonedDoc) => {
-              // Convert oklch & oklab colors to safe hex fallback across all stylesheets
-              const styleEls = clonedDoc.querySelectorAll('style, link[rel="stylesheet"]');
-              styleEls.forEach((s) => {
+              // 1. Process all <style> elements
+              clonedDoc.querySelectorAll('style').forEach((s) => {
                 try {
-                  if (s.tagName === 'STYLE') {
-                    s.innerHTML = s.innerHTML
-                      .replace(/oklch\([^)]+\)/gi, '#1e293b')
-                      .replace(/oklab\([^)]+\)/gi, '#1e293b');
-                  }
+                  s.textContent = (s.textContent || '')
+                    .replace(/oklch\([^)]+\)/gi, '#1e293b')
+                    .replace(/oklab\([^)]+\)/gi, '#1e293b');
                 } catch (e) {}
               });
+
+              // 2. Process all stylesheets & cssRules
+              try {
+                Array.from(clonedDoc.styleSheets).forEach((sheet) => {
+                  try {
+                    const rules = sheet.cssRules || sheet.rules;
+                    if (rules) {
+                      Array.from(rules).forEach((rule: any) => {
+                        if (rule.style && rule.style.cssText) {
+                          if (rule.style.cssText.includes('oklch') || rule.style.cssText.includes('oklab')) {
+                            rule.style.cssText = rule.style.cssText
+                              .replace(/oklch\([^)]+\)/gi, '#1e293b')
+                              .replace(/oklab\([^)]+\)/gi, '#1e293b');
+                          }
+                        }
+                      });
+                    }
+                  } catch (e) {}
+                });
+              } catch (e) {}
+
+              // 3. Process all inline style attributes on elements
+              const el = clonedDoc.querySelector('#invoice-printable-area') as HTMLElement;
+              if (el) {
+                el.querySelectorAll('*').forEach((node) => {
+                  const htmlEl = node as HTMLElement;
+                  const styleAttr = htmlEl.getAttribute('style');
+                  if (styleAttr && (styleAttr.includes('oklch') || styleAttr.includes('oklab'))) {
+                    htmlEl.setAttribute('style', styleAttr.replace(/oklch\([^)]+\)/gi, '#1e293b').replace(/oklab\([^)]+\)/gi, '#1e293b'));
+                  }
+                });
+              }
             }
           });
 
