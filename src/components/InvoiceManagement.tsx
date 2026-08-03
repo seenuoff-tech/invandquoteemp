@@ -9,6 +9,7 @@ import {
   PlusCircle,
   X,
   Printer,
+  Download,
   Mail,
   Send,
   IndianRupee,
@@ -470,11 +471,32 @@ export default function InvoiceManagement({
                                 </button>
                               )}
 
+                              {/* Direct PDF Download */}
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const blob = await generateDocumentPDF({ type: 'invoice', data: inv }, customers, settings);
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `${inv.number}.pdf`;
+                                    a.click();
+                                    window.URL.revokeObjectURL(url);
+                                  } catch (err) {
+                                    alert('Failed to download PDF: ' + String(err));
+                                  }
+                                }}
+                                className="p-1 text-slate-400 hover:text-emerald-600 rounded cursor-pointer"
+                                title="Download PDF"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+
                               {/* Preview / Print */}
                               <button
                                 onClick={() => onSelectPrint({ type: 'invoice', data: inv })}
                                 className="p-1 text-slate-400 hover:text-indigo-600 rounded cursor-pointer"
-                                title="Print / Save PDF"
+                                title="Print / Preview PDF"
                               >
                                 <Eye className="w-4 h-4" />
                               </button>

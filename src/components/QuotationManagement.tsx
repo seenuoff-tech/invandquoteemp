@@ -9,6 +9,7 @@ import {
   ChevronDown,
   RefreshCw,
   Eye,
+  Download,
   FileText,
   Mail,
   Send,
@@ -363,6 +364,27 @@ export default function QuotationManagement({
                           </td>
                           <td className="py-3.5 px-4 text-center">
                             <div className="flex items-center justify-center gap-1.5">
+                              {/* Direct PDF Download */}
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const blob = await generateDocumentPDF({ type: 'quotation', data: q }, customers, settings);
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `${q.number}.pdf`;
+                                    a.click();
+                                    window.URL.revokeObjectURL(url);
+                                  } catch (err) {
+                                    alert('Failed to download PDF: ' + String(err));
+                                  }
+                                }}
+                                className="p-1 text-slate-400 hover:text-emerald-600 rounded cursor-pointer"
+                                title="Download PDF"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+
                               {/* Preview / Print */}
                               <button
                                 onClick={() => onSelectPrint({ type: 'quotation', data: q })}

@@ -1,5 +1,6 @@
 import { Invoice, Quotation, Customer, AdminSettings } from '../types';
 import { Printer, X, Download, Share2 } from 'lucide-react';
+import { generateDocumentPDF } from '../utils/pdfGenerator';
 
 interface PrintViewProps {
   document: {
@@ -24,8 +25,19 @@ export default function PrintView({ document, customers, settings, onClose }: Pr
     window.print();
   };
 
-  const handleSimulateDownload = () => {
-    window.print();
+  const handleSimulateDownload = async () => {
+    try {
+      const blob = await generateDocumentPDF(document, customers, settings);
+      const url = window.URL.createObjectURL(blob);
+      const a = window.document.createElement('a');
+      a.href = url;
+      a.download = `${docNumber}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error generating PDF download:', err);
+      alert('Failed to download PDF');
+    }
   };
 
   const handleShare = async () => {
@@ -59,10 +71,10 @@ export default function PrintView({ document, customers, settings, onClose }: Pr
   return (
     <div id="print-view-overlay" className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in print:p-0 print:bg-white print:relative print:block">
       {/* Container */}
-      <div className="bg-white rounded-xl max-w-4xl w-full shadow-2xl border border-slate-100 flex flex-col min-h-[90vh] print:min-h-0 print:shadow-none print:border-none print:rounded-none print:w-full">
+      <div className="bg-white rounded-xl max-w-4xl w-full shadow-2xl border border-slate-100 flex flex-col max-h-[92vh] print:max-h-none print:shadow-none print:border-none print:rounded-none print:w-full overflow-hidden">
         
-        {/* Controls Bar (Hidden in Print) */}
-        <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between print:hidden">
+        {/* Controls Bar (Sticky top, Hidden in Print) */}
+        <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0 print:hidden sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-slate-700 capitalize">
               Print Preview: {docNumber}
