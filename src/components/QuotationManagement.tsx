@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import { generateDocumentPDF } from '../utils/pdfGenerator';
+import WhatsAppShareModal from './WhatsAppShareModal';
 
 interface QuotationManagementProps {
   quotations: Quotation[];
@@ -60,7 +61,8 @@ export default function QuotationManagement({
   const [status, setStatus] = useState<QuotationStatus>('Draft');
   const [quoNumber, setQuoNumber] = useState('');
 
-
+  // WhatsApp Share Modal
+  const [waShareQuotation, setWaShareQuotation] = useState<Quotation | null>(null);
 
   // Generate Quotation Number
   const generateQuotationNumber = () => {
@@ -199,45 +201,14 @@ export default function QuotationManagement({
     alert(`Quotation ${q.number} duplicated as draft ${duplicated.number}`);
   };
 
-  const handleOpenChannel = async (q: Quotation, method: 'Email' | 'WhatsApp') => {
+  const handleOpenChannel = (q: Quotation, method: 'Email' | 'WhatsApp') => {
     const cust = customers.find(c => c.id === q.customerId);
-    const text = method === 'Email' 
-        ? `Subject: Project Quotation ${q.number}\n\nDear Client,\n\nWe are pleased to submit our commercial proposal ${q.number} for your review. The total proposal grand total is ₹${q.grandTotal.toFixed(2)}.\n\nBest Regards,\n${settings.companyName}`
-        : `Hello, this is ${settings.companyName}. We have generated quotation *${q.number}* for you. Grand Total: *₹${q.grandTotal.toFixed(2)}*.`;
-    
     if (method === 'WhatsApp') {
-      try {
-        const doc = { type: 'quotation' as const, data: q };
-        const blob = await generateDocumentPDF(doc, customers, settings);
-        const file = new File([blob], `${q.number}.pdf`, { type: 'application/pdf' });
-        
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: q.number,
-            text: text
-          });
-        } else {
-          // Fallback to auto-download and wa.me open
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${q.number}.pdf`;
-          a.click();
-          window.URL.revokeObjectURL(url);
-          
-          const phone = cust?.mobile?.replace(/\D/g, '') || '';
-          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
-          alert('We downloaded the quotation PDF. Please drag and drop it into the WhatsApp window that just opened.');
-        }
-      } catch (err: any) {
-        console.error('Failed to generate PDF:', err);
-        alert('Failed to generate PDF for sharing. Error: ' + (err.message || String(err)));
-      }
+      setWaShareQuotation(q);
     } else {
-        window.open(`mailto:${cust?.email || ''}?subject=Quotation ${q.number}&body=${encodeURIComponent(text)}`, '_blank');
+      const text = `Subject: Project Quotation ${q.number}\n\nDear Client,\n\nWe are pleased to submit our commercial proposal ${q.number} for your review. The total proposal grand total is ₹${q.grandTotal.toFixed(2)}.\n\nBest Regards,\n${settings.companyName}`;
+      window.open(`mailto:${cust?.email || ''}?subject=Quotation ${q.number}&body=${encodeURIComponent(text)}`, '_blank');
     }
-    
     if (q.status === 'Draft') {
       onUpdateQuotation({ ...q, status: 'Sent' });
     }
@@ -689,7 +660,16 @@ export default function QuotationManagement({
         </form>
       )}
 
-
+      {/* WhatsApp Share Modal */}
+      {waShareQuotation && (
+        <WhatsAppShareModal
+          docType="quotation"
+          doc={waShareQuotation}
+          customers={customers}
+          settings={settings}
+          onClose={() => setWaShareQuotation(null)}
+        />
+      )}
     </div>
   );
 }

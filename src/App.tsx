@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Customer, Invoice, Quotation, AdminSettings, AppNotification, Employee, Task, TimeLog, Meeting } from './types';
+import { Customer, Invoice, Quotation, AdminSettings, AppNotification, Employee, Task, TimeLog, Meeting, Lead } from './types';
 import {
   initialCustomers,
   initialInvoices,
@@ -24,6 +24,7 @@ import TaskManagement from './components/TaskManagement';
 import TimeTracking from './components/TimeTracking';
 import MeetingSchedule from './components/MeetingSchedule';
 import LoginScreen from './components/LoginScreen';
+import LeadsManagement from './components/LeadsManagement';
 
 // Icon Imports
 import {
@@ -40,7 +41,8 @@ import {
   CreditCard,
   CheckSquare,
   Clock,
-  Calendar
+  Calendar,
+  TrendingUp
 } from 'lucide-react';
 
 export default function App() {
@@ -64,6 +66,7 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
 
   // State linking for editing or quote-conversion transitions
   const [activeInvoiceToEdit, setActiveInvoiceToEdit] = useState<Invoice | null>(null);
@@ -78,7 +81,7 @@ export default function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [custRes, quoRes, invRes, setRes, notRes, empRes, taskRes, timeRes, meetRes] = await Promise.all([
+        const [custRes, quoRes, invRes, setRes, notRes, empRes, taskRes, timeRes, meetRes, leadsRes] = await Promise.all([
           fetch('/api/customers'),
           fetch('/api/quotations'),
           fetch('/api/invoices'),
@@ -87,7 +90,8 @@ export default function App() {
           fetch('/api/employees'),
           fetch('/api/tasks'),
           fetch('/api/time-logs'),
-          fetch('/api/meetings')
+          fetch('/api/meetings'),
+          fetch('/api/leads')
         ]);
         
         if (custRes.ok) setCustomers(await custRes.json());
@@ -102,6 +106,7 @@ export default function App() {
         if (taskRes.ok) setTasks(await taskRes.json());
         if (timeRes.ok) setTimeLogs(await timeRes.json());
         if (meetRes.ok) setMeetings(await meetRes.json());
+        if (leadsRes.ok) setLeads(await leadsRes.json());
       } catch (err) {
         console.error("Error fetching data from API:", err);
       }
@@ -363,10 +368,61 @@ export default function App() {
   const handleUpdateMeeting = (m: Meeting) => { setMeetings(p => p.map(x => x.id === m.id ? m : x)); fetch(`/api/meetings/${m.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(m) }).catch(console.error); };
   const handleDeleteMeeting = (id: string) => { setMeetings(p => p.filter(x => x.id !== id)); fetch(`/api/meetings/${id}`, { method: 'DELETE' }).catch(console.error); };
 
+  // Leads CRUD
+  const handleAddLead = (lead: Lead) => {
+    setLeads(p => [lead, ...p]);
+    fetch('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lead) }).catch(console.error);
+  };
+  const handleUpdateLead = (lead: Lead) => {
+    setLeads(p => p.map(l => l.id === lead.id ? lead : l));
+    fetch(`/api/leads/${lead.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lead) }).catch(console.error);
+  };
+  const handleDeleteLead = (id: string) => {
+    setLeads(p => p.filter(l => l.id !== id));
+    fetch(`/api/leads/${id}`, { method: 'DELETE' }).catch(console.error);
+  };
+  const handleConvertLead = async (lead: Lead) => {
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/convert`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        // Add new customer to local state
+        const newCustomer: Customer = {
+          id: data.customerId,
+          name: lead.name,
+          companyName: '',
+          mobile: lead.mobile,
+          email: '',
+          billingAddress: '',
+          shippingAddress: '',
+          notes: lead.notes,
+          createdAt: new Date().toISOString().split('T')[0],
+        };
+        setCustomers(p => [newCustomer, ...p]);
+        // Mark lead as Converted in local state
+        setLeads(p => p.map(l => l.id === lead.id ? { ...l, status: 'Converted' as const } : l));
+        // Create notification
+        const notif: AppNotification = {
+          id: `notif-lead-conv-${Date.now()}`,
+          title: 'Lead Converted',
+          message: `Lead "${lead.name}" (${lead.mobile}) has been converted to a Customer successfully.`,
+          type: 'success',
+          date: new Date().toISOString().split('T')[0],
+          read: false,
+        };
+        setNotifications(p => [notif, ...p]);
+        fetch('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(notif) }).catch(console.error);
+      }
+    } catch (err) {
+      console.error('Lead conversion failed:', err);
+    }
+  };
+
   // Nav Links Configuration
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard },
     { name: 'Customers', icon: Users },
+    { name: 'Leads', icon: TrendingUp },
     { name: 'Quotations', icon: FileText },
     { name: 'Invoices', icon: FileText },
     { name: 'Payments', icon: CreditCard },
@@ -654,6 +710,17 @@ export default function App() {
 
           {activeTab === 'Meetings' && (
             <MeetingSchedule meetings={meetings} employees={employees} onAdd={handleAddMeeting} onUpdate={handleUpdateMeeting} onDelete={handleDeleteMeeting} />
+          )}
+
+          {activeTab === 'Leads' && (
+            <LeadsManagement
+              leads={leads}
+              onAddLead={handleAddLead}
+              onUpdateLead={handleUpdateLead}
+              onDeleteLead={handleDeleteLead}
+              onConvertLead={handleConvertLead}
+              leadsPin={settings.leadsPin || '1234'}
+            />
           )}
         </main>
       </div>

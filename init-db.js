@@ -80,15 +80,22 @@ async function initDB() {
         upiId VARCHAR(100),
         gpayNumber VARCHAR(100),
         invoicePrefix VARCHAR(50),
-        quotationPrefix VARCHAR(50)
+        quotationPrefix VARCHAR(50),
+        leadsPin VARCHAR(10)
       )
     `);
 
+    // Alter existing settings table to add leadsPin if not present (safe migration — must run BEFORE INSERT)
+    try {
+      await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS leadsPin VARCHAR(10)`);
+    } catch (_) { /* column may already exist */ }
+
     // Insert default settings if not exists
     await pool.query(`
-      INSERT IGNORE INTO settings (id, companyName, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix)
-      VALUES (1, 'My Company', '123 Business St', '555-0100', 'billing@mycompany.com', 'Bank Name', '0000000000', 'IFSC0001234', 'company@upi', '', 'INV', 'QUO')
+      INSERT IGNORE INTO settings (id, companyName, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix, leadsPin)
+      VALUES (1, 'My Company', '123 Business St', '555-0100', 'billing@mycompany.com', 'Bank Name', '0000000000', 'IFSC0001234', 'company@upi', '', 'INV', 'QUO', '1234')
     `);
+
 
     // Create Notifications Table
     await pool.query(`
@@ -101,6 +108,18 @@ async function initDB() {
         read_status BOOLEAN DEFAULT FALSE,
         invoiceId VARCHAR(255),
         quotationId VARCHAR(255)
+      )
+    `);
+
+    // Create Leads Table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS leads (
+        id VARCHAR(255) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        mobile VARCHAR(50),
+        notes TEXT,
+        status VARCHAR(50) DEFAULT 'New',
+        createdAt VARCHAR(50)
       )
     `);
 

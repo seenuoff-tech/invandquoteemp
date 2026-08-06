@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AdminSettings } from '../types';
-import { Save, Settings, Landmark, FileText, CheckCircle } from 'lucide-react';
+import { Save, Settings, Landmark, FileText, CheckCircle, Lock } from 'lucide-react';
 
 interface AdminSettingsProps {
   settings: AdminSettings;
@@ -224,6 +224,33 @@ export default function AdminSettingsPanel({ settings, onSave }: AdminSettingsPr
             </div>
 
 
+          </div>
+        </div>
+
+        {/* Security */}
+        <div className="bg-white rounded-xl border border-slate-100 p-6 space-y-4">
+          <div className="flex items-center gap-2 text-slate-800 font-medium border-b border-slate-50 pb-3">
+            <Lock className="w-5 h-5 text-slate-400" />
+            <span>Security</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Leads PIN (4 digits)</label>
+              <input
+                type="password"
+                name="leadsPin"
+                value={formData.leadsPin || ''}
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setFormData(prev => ({ ...prev, leadsPin: val }));
+                }}
+                maxLength={4}
+                inputMode="numeric"
+                placeholder="e.g. 1234"
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <p className="text-xxs text-slate-400 mt-1">4-digit PIN required to access the Leads section.</p>
+            </div>
           </div>
         </div>
 

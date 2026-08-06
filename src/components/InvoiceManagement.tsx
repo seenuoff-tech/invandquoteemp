@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 import { generateDocumentPDF } from '../utils/pdfGenerator';
+import WhatsAppShareModal from './WhatsAppShareModal';
 
 interface InvoiceManagementProps {
   invoices: Invoice[];
@@ -65,6 +66,9 @@ export default function InvoiceManagement({
   const [payAmount, setPayAmount] = useState<number>(0);
   const [payMethod, setPayMethod] = useState('Bank Transfer');
   const [payNotes, setPayNotes] = useState('');
+
+  // WhatsApp Share Modal
+  const [waShareInvoice, setWaShareInvoice] = useState<Invoice | null>(null);
 
 
 
@@ -282,43 +286,13 @@ export default function InvoiceManagement({
     alert(`Success! Payment of ₹${payAmount.toFixed(2)} recorded for ${paymentInvoice.number}.`);
   };
 
-  const handleOpenChannel = async (inv: Invoice, method: 'Email' | 'WhatsApp') => {
+  const handleOpenChannel = (inv: Invoice, method: 'Email' | 'WhatsApp') => {
     const cust = customers.find(c => c.id === inv.customerId);
-    const text = method === 'Email' 
-        ? `Subject: Invoice ${inv.number}\n\nDear Client,\n\nPlease find the details for invoice ${inv.number}. The total amount is ₹${inv.grandTotal.toFixed(2)}.\n\nBest Regards,\n${settings.companyName}`
-        : `Hello, this is ${settings.companyName}. We have generated invoice *${inv.number}* for you. Grand Total: *₹${inv.grandTotal.toFixed(2)}*.`;
-    
     if (method === 'WhatsApp') {
-      try {
-        const doc = { type: 'invoice' as const, data: inv };
-        const blob = await generateDocumentPDF(doc, customers, settings);
-        const file = new File([blob], `${inv.number}.pdf`, { type: 'application/pdf' });
-        
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: inv.number,
-            text: text
-          });
-        } else {
-          // Fallback to auto-download and wa.me open
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${inv.number}.pdf`;
-          a.click();
-          window.URL.revokeObjectURL(url);
-          
-          const phone = cust?.mobile?.replace(/\D/g, '') || '';
-          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
-          alert('We downloaded the invoice PDF. Please drag and drop it into the WhatsApp window that just opened.');
-        }
-      } catch (err: any) {
-        console.error('Failed to generate PDF:', err);
-        alert('Failed to generate PDF for sharing. Error: ' + (err.message || String(err)));
-      }
+      setWaShareInvoice(inv);
     } else {
-        window.open(`mailto:${cust?.email || ''}?subject=Invoice ${inv.number}&body=${encodeURIComponent(text)}`, '_blank');
+      const text = `Subject: Invoice ${inv.number}\n\nDear Client,\n\nPlease find the details for invoice ${inv.number}. The total amount is ₹${inv.grandTotal.toFixed(2)}.\n\nBest Regards,\n${settings.companyName}`;
+      window.open(`mailto:${cust?.email || ''}?subject=Invoice ${inv.number}&body=${encodeURIComponent(text)}`, '_blank');
     }
   };
 
@@ -846,6 +820,17 @@ export default function InvoiceManagement({
             </form>
           </div>
         </div>
+      )}
+
+      {/* WhatsApp Share Modal */}
+      {waShareInvoice && (
+        <WhatsAppShareModal
+          docType="invoice"
+          doc={waShareInvoice}
+          customers={customers}
+          settings={settings}
+          onClose={() => setWaShareInvoice(null)}
+        />
       )}
     </div>
   );

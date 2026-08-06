@@ -225,19 +225,19 @@ app.get('/api/settings', async (req, res) => {
 
 app.post('/api/settings', async (req, res) => {
   try {
-    const { companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix } = req.body;
+    const { companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix, leadsPin } = req.body;
     
     // Check if exists
     const [rows] = await pool.query('SELECT id FROM settings WHERE id=1');
     if (rows.length === 0) {
       await pool.query(
-        'INSERT INTO settings (id, companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix]
+        'INSERT INTO settings (id, companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix, leadsPin) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix, leadsPin || '1234']
       );
     } else {
       await pool.query(
-        'UPDATE settings SET companyName=?, logoUrl=?, address=?, phone=?, email=?, bankName=?, bankAccount=?, bankIfsc=?, upiId=?, gpayNumber=?, invoicePrefix=?, quotationPrefix=? WHERE id=1',
-        [companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix]
+        'UPDATE settings SET companyName=?, logoUrl=?, address=?, phone=?, email=?, bankName=?, bankAccount=?, bankIfsc=?, upiId=?, gpayNumber=?, invoicePrefix=?, quotationPrefix=?, leadsPin=? WHERE id=1',
+        [companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix, leadsPin || '1234']
       );
     }
     res.json({ success: true });
@@ -476,6 +476,75 @@ app.delete('/api/time-logs/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM time_logs WHERE id=?', [req.params.id]);
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- LEADS ---
+app.get('/api/leads', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM leads ORDER BY createdAt DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/leads', async (req, res) => {
+  try {
+    const { id, name, mobile, notes, status, createdAt } = req.body;
+    await pool.query(
+      'INSERT INTO leads (id, name, mobile, notes, status, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, name, mobile, notes || null, status || 'New', createdAt]
+    );
+    res.json({ success: true, id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/leads/:id', async (req, res) => {
+  try {
+    const { name, mobile, notes, status } = req.body;
+    await pool.query(
+      'UPDATE leads SET name=?, mobile=?, notes=?, status=? WHERE id=?',
+      [name, mobile, notes || null, status, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/leads/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM leads WHERE id=?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Convert lead -> customer
+app.post('/api/leads/:id/convert', async (req, res) => {
+  try {
+    const [leadRows] = await pool.query('SELECT * FROM leads WHERE id=?', [req.params.id]);
+    if (leadRows.length === 0) return res.status(404).json({ error: 'Lead not found' });
+    const lead = leadRows[0];
+
+    // Build customer record
+    const customerId = `cust-lead-${Date.now()}`;
+    const createdAt = new Date().toISOString().split('T')[0];
+    await pool.query(
+      'INSERT INTO customers (id, name, companyName, mobile, email, billingAddress, shippingAddress, notes, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [customerId, lead.name, '', lead.mobile, '', '', '', lead.notes || '', createdAt]
+    );
+
+    // Mark lead as Converted
+    await pool.query("UPDATE leads SET status='Converted' WHERE id=?", [req.params.id]);
+
+    res.json({ success: true, customerId, customerName: lead.name });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

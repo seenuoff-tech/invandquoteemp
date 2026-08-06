@@ -80,6 +80,7 @@ export interface AdminSettings {
   invoicePrefix: string;
   quotationPrefix: string;
 
+  leadsPin?: string;
 }
 
 export interface AppNotification {
@@ -134,4 +135,15 @@ export interface Meeting {
   endTime: string;
   organizerId: string;
   attendees: string[]; // array of employee IDs
+}
+
+export type LeadStatus = 'New' | 'Contacted' | 'Converted';
+
+export interface Lead {
+  id: string;
+  name: string;
+  mobile: string;
+  notes?: string;
+  status: LeadStatus;
+  createdAt: string;
 }
