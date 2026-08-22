@@ -59,6 +59,7 @@ export default function InvoiceManagement({
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<InvoiceStatus>('Unpaid');
   const [invNumber, setInvNumber] = useState('');
+  const [formPaidAmount, setFormPaidAmount] = useState(0);
 
   // Payment Collection States
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -85,6 +86,7 @@ export default function InvoiceManagement({
         setItems(activeInvoiceToEdit.items.map((line) => ({ ...line })));
         setNotes(activeInvoiceToEdit.notes || '');
         setStatus('Unpaid');
+        setFormPaidAmount(0);
         setIsFormOpen(true);
       } else {
         // Editing an existing invoice
@@ -126,6 +128,7 @@ export default function InvoiceManagement({
     setItems([{ id: '1', description: '', quantity: 1, unitPrice: 0, subtotal: 0 }]);
     setNotes('');
     setStatus('Unpaid');
+    setFormPaidAmount(0);
     setIsFormOpen(true);
   };
 
@@ -138,6 +141,7 @@ export default function InvoiceManagement({
     setItems(inv.items.map(item => ({ ...item })));
     setNotes(inv.notes || '');
     setStatus(inv.status);
+    setFormPaidAmount(inv.paidAmount || 0);
     setIsFormOpen(true);
   };
 
@@ -189,6 +193,8 @@ export default function InvoiceManagement({
 
     const { subtotal, taxRate, taxAmount, grandTotal } = calculateTotals();
 
+    const calculatedBalance = Math.max(0, grandTotal - formPaidAmount);
+
     const invoiceData: Invoice = {
       id: editingInvoice ? editingInvoice.id : `inv-${Date.now()}`,
       number: invNumber,
@@ -200,28 +206,22 @@ export default function InvoiceManagement({
       taxRate,
       taxAmount,
       grandTotal,
-      paidAmount: editingInvoice ? editingInvoice.paidAmount : 0,
-      balance: editingInvoice ? (grandTotal - editingInvoice.paidAmount) : grandTotal,
+      paidAmount: formPaidAmount,
+      balance: calculatedBalance,
       notes,
       status: editingInvoice ? status : 'Unpaid',
       payments: editingInvoice ? editingInvoice.payments : [],
     };
 
-    // Calculate status: respect explicit user choice if valid, or compute based on paid amount & due date
-    if (editingInvoice) {
-      if (invoiceData.balance <= 0) {
-        invoiceData.status = 'Paid';
-        invoiceData.balance = 0;
-      } else if (invoiceData.paidAmount > 0) {
-        invoiceData.status = status === 'Paid' ? 'Partially Paid' : status;
-      } else {
-        invoiceData.status = status;
-      }
+    // Auto-calculate status based on payment details & due date
+    if (invoiceData.balance <= 0) {
+      invoiceData.status = 'Paid';
+      invoiceData.balance = 0;
+    } else if (invoiceData.paidAmount > 0) {
+      invoiceData.status = 'Partially Paid';
     } else {
       const today = new Date().toISOString().split('T')[0];
-      if (invoiceData.dueDate < today && invoiceData.status === 'Unpaid') {
-        invoiceData.status = 'Overdue';
-      }
+      invoiceData.status = invoiceData.dueDate < today ? 'Overdue' : 'Unpaid';
     }
 
     if (editingInvoice) {
@@ -665,33 +665,13 @@ export default function InvoiceManagement({
             />
           </div>
 
-          {editingInvoice && (
-            <div className="grid grid-cols-2 gap-4 max-w-sm">
-              <div>
-                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Invoice Status</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as InvoiceStatus)}
-                  className="w-full text-sm border border-slate-200 rounded-lg p-2 bg-white focus:outline-none"
-                >
-                  <option value="Unpaid">Unpaid</option>
-                  <option value="Partially Paid">Partially Paid</option>
-                  <option value="Paid">Paid</option>
-                  <option value="Overdue">Overdue</option>
-                </select>
-              </div>
-              <div className="self-end pb-2">
-                <p className="text-xxs text-slate-400">Paid amount: <strong>₹{editingInvoice.paidAmount.toFixed(2)}</strong></p>
-                <p className="text-xxs text-slate-400">Balance due: <strong>₹{editingInvoice.balance.toFixed(2)}</strong></p>
-              </div>
-            </div>
-          )}
+
 
           {/* Totals Summary */}
           <div className="border-t border-slate-100 pt-4 flex flex-col md:flex-row md:justify-between items-end gap-4">
             <p className="text-xxs text-slate-400">All prices calculated according to standard ledger definitions.</p>
 
-            <div className="w-full md:w-64 space-y-1.5 text-xs">
+            <div className="w-full md:w-64 space-y-2 text-xs">
               <div className="flex justify-between text-slate-500">
                 <span>Subtotal:</span>
                 <span className="font-semibold text-slate-700">₹{totals.subtotal.toFixed(2)}</span>
@@ -700,6 +680,27 @@ export default function InvoiceManagement({
               <div className="flex justify-between text-slate-800 font-bold border-t border-slate-100 pt-1.5 text-sm">
                 <span>Grand Total:</span>
                 <span className="text-indigo-600 font-mono">₹{totals.grandTotal.toFixed(2)}</span>
+              </div>
+
+              <div className="flex justify-between items-center text-slate-500 border-t border-slate-100 pt-2">
+                <span>Paid Amount (₹):</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formPaidAmount || ''}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    setFormPaidAmount(val);
+                  }}
+                  placeholder="0.00"
+                  className="w-28 text-right text-xs border border-slate-200 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+                />
+              </div>
+
+              <div className="flex justify-between text-slate-800 font-bold border-t border-slate-100 pt-1.5 text-sm">
+                <span>Balance Due:</span>
+                <span className="text-rose-600 font-mono">₹{Math.max(0, totals.grandTotal - formPaidAmount).toFixed(2)}</span>
               </div>
             </div>
           </div>
