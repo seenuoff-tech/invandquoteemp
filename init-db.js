@@ -79,21 +79,27 @@ async function initDB() {
         bankIfsc VARCHAR(100),
         upiId VARCHAR(100),
         gpayNumber VARCHAR(100),
+        gpayQrUrl VARCHAR(500),
         invoicePrefix VARCHAR(50),
         quotationPrefix VARCHAR(50),
-        leadsPin VARCHAR(10)
+        leadsPin VARCHAR(10),
+        accountsPin VARCHAR(10),
+        pendingPaymentsPin VARCHAR(10)
       )
     `);
 
     // Alter existing settings table to add leadsPin if not present (safe migration — must run BEFORE INSERT)
     try {
       await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS leadsPin VARCHAR(10)`);
+      await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS accountsPin VARCHAR(10)`);
+      await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS pendingPaymentsPin VARCHAR(10)`);
+      await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS gpayQrUrl VARCHAR(500)`);
     } catch (_) { /* column may already exist */ }
 
     // Insert default settings if not exists
     await pool.query(`
-      INSERT IGNORE INTO settings (id, companyName, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix, leadsPin)
-      VALUES (1, 'My Company', '123 Business St', '555-0100', 'billing@mycompany.com', 'Bank Name', '0000000000', 'IFSC0001234', 'company@upi', '', 'INV', 'QUO', '1234')
+      INSERT IGNORE INTO settings (id, companyName, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix, leadsPin, accountsPin, pendingPaymentsPin)
+      VALUES (1, 'My Company', '123 Business St', '555-0100', 'billing@mycompany.com', 'Bank Name', '0000000000', 'IFSC0001234', 'company@upi', '', 'INV', 'QUO', '1234', '2807', '2025')
     `);
 
 
@@ -111,6 +117,19 @@ async function initDB() {
       )
     `);
 
+    // Create Accounts Table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS accounts (
+        id VARCHAR(255) PRIMARY KEY,
+        type VARCHAR(50) NOT NULL,
+        date VARCHAR(50) NOT NULL,
+        category VARCHAR(255) NOT NULL,
+        amount DECIMAL(10, 2) NOT NULL,
+        description TEXT,
+        createdAt VARCHAR(50)
+      )
+    `);
+
     // Create Leads Table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS leads (
@@ -119,6 +138,68 @@ async function initDB() {
         mobile VARCHAR(50),
         notes TEXT,
         status VARCHAR(50) DEFAULT 'New',
+        createdAt VARCHAR(50)
+      )
+    `);
+
+    // Create Manual Pendings Table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS manual_pendings (
+        id VARCHAR(255) PRIMARY KEY,
+        customerId VARCHAR(255),
+        clientName VARCHAR(255) NOT NULL,
+        mobile VARCHAR(50),
+        totalAmount DECIMAL(10, 2) NOT NULL,
+        paidAmount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+        balanceAmount DECIMAL(10, 2) NOT NULL,
+        dueDate VARCHAR(50),
+        notes TEXT,
+        createdAt VARCHAR(50)
+      )
+    `);
+
+    // Create Leave Requests Table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS leave_requests (
+        id VARCHAR(255) PRIMARY KEY,
+        employeeId VARCHAR(255) NOT NULL,
+        employeeName VARCHAR(255) NOT NULL,
+        leaveType VARCHAR(100) NOT NULL,
+        startDate VARCHAR(50) NOT NULL,
+        endDate VARCHAR(50) NOT NULL,
+        reason TEXT,
+        status VARCHAR(50) DEFAULT 'Pending',
+        createdAt VARCHAR(50)
+      )
+    `);
+
+    // Create Attendance Logs Table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS attendance_logs (
+        id VARCHAR(255) PRIMARY KEY,
+        employeeId VARCHAR(255) NOT NULL,
+        employeeName VARCHAR(255) NOT NULL,
+        clockIn VARCHAR(50) NOT NULL,
+        clockOut VARCHAR(50),
+        durationMinutes INT DEFAULT 0,
+        date VARCHAR(50) NOT NULL
+      )
+    `);
+
+    // Create Employee Salaries Table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS employee_salaries (
+        id VARCHAR(255) PRIMARY KEY,
+        employeeId VARCHAR(255) NOT NULL,
+        employeeName VARCHAR(255) NOT NULL,
+        month VARCHAR(50) NOT NULL,
+        salaryAmount DECIMAL(10, 2) NOT NULL,
+        paidAmount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+        balanceAmount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+        status VARCHAR(50) DEFAULT 'Unpaid',
+        paidDate VARCHAR(50),
+        paymentMethod VARCHAR(100),
+        notes TEXT,
         createdAt VARCHAR(50)
       )
     `);

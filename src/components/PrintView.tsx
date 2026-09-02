@@ -207,28 +207,40 @@ export default function PrintView({ document, customers, settings, onClose }: Pr
             {/* Ledger Totals & Bank/GPay Details */}
             <div className="flex justify-between items-start gap-8 pt-2">
               
-              {/* Bank Account Details & GPay No */}
-              <div className="w-7/12 bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs space-y-2">
-                <p className="font-bold text-blue-900 uppercase tracking-wider text-xxs">BANK ACCOUNT & PAYMENT DETAILS</p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-slate-700 font-mono">
-                  <div className="text-slate-500 font-sans">Bank Name:</div>
-                  <div className="font-semibold text-slate-900">{settings.bankName || 'Silicon Valley Trust'}</div>
-                  
-                  <div className="text-slate-500 font-sans">Account No:</div>
-                  <div className="font-bold text-slate-900">{settings.bankAccount || '987654321098'}</div>
-                  
-                  <div className="text-slate-500 font-sans">IFSC Code:</div>
-                  <div className="font-semibold text-slate-900">{settings.bankIfsc || 'SVT0001234'}</div>
-                  
-                  <div className="text-slate-500 font-sans">GPay No:</div>
-                  <div className="font-bold text-emerald-700">{settings.gpayNumber || settings.phone || 'N/A'}</div>
+              {/* Bank Account Details & GPay QR */}
+              <div className="w-7/12 bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs flex justify-between items-center gap-4">
+                <div className="space-y-1.5 flex-1">
+                  <p className="font-bold text-blue-900 uppercase tracking-wider text-xxs">BANK ACCOUNT & PAYMENT DETAILS</p>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-slate-700 font-mono">
+                    <div className="text-slate-500 font-sans">Bank Name:</div>
+                    <div className="font-semibold text-slate-900">{settings.bankName || 'Silicon Valley Trust'}</div>
+                    
+                    <div className="text-slate-500 font-sans">Account No:</div>
+                    <div className="font-bold text-slate-900">{settings.bankAccount || '987654321098'}</div>
+                    
+                    <div className="text-slate-500 font-sans">IFSC Code:</div>
+                    <div className="font-semibold text-slate-900">{settings.bankIfsc || 'SVT0001234'}</div>
+                    
+                    <div className="text-slate-500 font-sans">GPay No:</div>
+                    <div className="font-bold text-emerald-700">{settings.gpayNumber || settings.phone || 'N/A'}</div>
 
-                  {settings.upiId && (
-                    <>
-                      <div className="text-slate-500 font-sans">UPI ID:</div>
-                      <div className="font-semibold text-slate-900">{settings.upiId}</div>
-                    </>
-                  )}
+                    {settings.upiId && (
+                      <>
+                        <div className="text-slate-500 font-sans">UPI ID:</div>
+                        <div className="font-semibold text-slate-900">{settings.upiId}</div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* GPay QR Code Box */}
+                <div className="text-center shrink-0 p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                  <img
+                    src={settings.gpayQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`upi://pay?pa=${settings.upiId || settings.gpayNumber || 'company@upi'}&pn=${encodeURIComponent(settings.companyName)}&am=${item.grandTotal}&cu=INR`)}`}
+                    alt="GPay QR Code"
+                    className="w-20 h-20 object-contain mx-auto"
+                  />
+                  <span className="text-[9px] font-black text-slate-700 uppercase tracking-wider block mt-1">SCAN TO PAY (GPAY / UPI)</span>
                 </div>
               </div>
 

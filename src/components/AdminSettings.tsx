@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AdminSettings } from '../types';
-import { Save, Settings, Landmark, FileText, CheckCircle, Lock } from 'lucide-react';
+import { Save, Settings, Landmark, FileText, CheckCircle, Lock, Upload, Image as ImageIcon, X } from 'lucide-react';
 
 interface AdminSettingsProps {
   settings: AdminSettings;
@@ -21,6 +21,24 @@ export default function AdminSettingsPanel({ settings, onSave }: AdminSettingsPr
       ...prev,
       [name]: name === 'taxRate' ? parseFloat(value) || 0 : value,
     }));
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, fieldName: keyof AdminSettings) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size exceeds 5MB limit. Please upload a smaller image.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData((prev) => ({
+          ...prev,
+          [fieldName]: reader.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -188,6 +206,64 @@ export default function AdminSettingsPanel({ settings, onSave }: AdminSettingsPr
                 className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">GPay / UPI QR Code Image</label>
+              
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                {formData.gpayQrUrl ? (
+                  <div className="relative group shrink-0">
+                    <img
+                      src={formData.gpayQrUrl}
+                      alt="GPay QR Preview"
+                      className="w-24 h-24 object-contain rounded-lg bg-white p-1 border border-slate-200 shadow-2xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, gpayQrUrl: '' }))}
+                      className="absolute -top-2 -right-2 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-1 shadow-md transition cursor-pointer"
+                      title="Remove QR Code"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-24 h-24 rounded-lg border-2 border-dashed border-slate-300 bg-white flex flex-col items-center justify-center text-slate-400 shrink-0">
+                    <ImageIcon className="w-8 h-8 stroke-1" />
+                    <span className="text-[10px] font-bold mt-1">No QR Code</span>
+                  </div>
+                )}
+
+                <div className="space-y-2 flex-1 w-full">
+                  <div className="flex items-center gap-2">
+                    <label className="bg-[#0439C5] hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-xs inline-flex items-center gap-1.5">
+                      <Upload className="w-4 h-4" />
+                      <span>Upload QR Code Image</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload(e, 'gpayQrUrl')}
+                        className="hidden"
+                      />
+                    </label>
+                    <span className="text-3xxs font-medium text-slate-400">PNG, JPG, WEBP (Max 5MB)</span>
+                  </div>
+
+                  <div>
+                    <span className="text-3xxs text-slate-400 uppercase font-bold block mb-1">Or Enter Image URL:</span>
+                    <input
+                      type="text"
+                      name="gpayQrUrl"
+                      value={formData.gpayQrUrl || ''}
+                      onChange={handleChange}
+                      placeholder="https://domain.com/gpay-qr.png or paste image data URL"
+                      className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+              <p className="text-xxs text-slate-400 mt-1">Upload your GPay / UPI QR Code image to automatically print it on invoice PDFs.</p>
+            </div>
           </div>
         </div>
 
@@ -233,7 +309,7 @@ export default function AdminSettingsPanel({ settings, onSave }: AdminSettingsPr
             <Lock className="w-5 h-5 text-slate-400" />
             <span>Security</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Leads PIN (4 digits)</label>
               <input
@@ -250,6 +326,40 @@ export default function AdminSettingsPanel({ settings, onSave }: AdminSettingsPr
                 className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
               />
               <p className="text-xxs text-slate-400 mt-1">4-digit PIN required to access the Leads section.</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Accounts PIN (4 digits)</label>
+              <input
+                type="password"
+                name="accountsPin"
+                value={formData.accountsPin || ''}
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setFormData(prev => ({ ...prev, accountsPin: val }));
+                }}
+                maxLength={4}
+                inputMode="numeric"
+                placeholder="e.g. 2807"
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <p className="text-xxs text-slate-400 mt-1">4-digit PIN required to access the Accounts section.</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Client Pending PIN (4 digits)</label>
+              <input
+                type="password"
+                name="pendingPaymentsPin"
+                value={formData.pendingPaymentsPin || ''}
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setFormData(prev => ({ ...prev, pendingPaymentsPin: val }));
+                }}
+                maxLength={6}
+                inputMode="numeric"
+                placeholder="e.g. 2025"
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+              />
+              <p className="text-xxs text-slate-400 mt-1">Security PIN required for Client Pending Payments section.</p>
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Customer, Invoice, Quotation, AdminSettings, AppNotification, Employee, Task, TimeLog, Meeting, Lead } from './types';
+import { Customer, Invoice, Quotation, AdminSettings, AppNotification, Employee, Task, TimeLog, Meeting, Lead, AccountEntry, ManualPendingEntry, LeaveRequest, AttendanceLog, EmployeeSalary } from './types';
 import {
   initialCustomers,
   initialInvoices,
@@ -25,6 +25,10 @@ import TimeTracking from './components/TimeTracking';
 import MeetingSchedule from './components/MeetingSchedule';
 import LoginScreen from './components/LoginScreen';
 import LeadsManagement from './components/LeadsManagement';
+import Accounts from './components/Accounts';
+import ClientPendingPayments from './components/ClientPendingPayments';
+import LeaveApprovalManagement from './components/LeaveApprovalManagement';
+import EmployeeSalaryManagement from './components/EmployeeSalaryManagement';
 
 // Icon Imports
 import {
@@ -42,7 +46,9 @@ import {
   CheckSquare,
   Clock,
   Calendar,
-  TrendingUp
+  TrendingUp,
+  Wallet,
+  ShieldAlert
 } from 'lucide-react';
 
 export default function App() {
@@ -67,6 +73,12 @@ export default function App() {
   const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [accounts, setAccounts] = useState<AccountEntry[]>([]);
+  const [manualPendings, setManualPendings] = useState<ManualPendingEntry[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
+  const [employeeSalaries, setEmployeeSalaries] = useState<EmployeeSalary[]>([]);
+  const [currentClockInLog, setCurrentClockInLog] = useState<AttendanceLog | null>(null);
 
   // State linking for editing or quote-conversion transitions
   const [activeInvoiceToEdit, setActiveInvoiceToEdit] = useState<Invoice | null>(null);
@@ -81,7 +93,7 @@ export default function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [custRes, quoRes, invRes, setRes, notRes, empRes, taskRes, timeRes, meetRes, leadsRes] = await Promise.all([
+        const [custRes, quoRes, invRes, setRes, notRes, empRes, taskRes, timeRes, meetRes, leadsRes, accountsRes, manRes, leaveRes, attRes, salRes] = await Promise.all([
           fetch('/api/customers'),
           fetch('/api/quotations'),
           fetch('/api/invoices'),
@@ -91,7 +103,12 @@ export default function App() {
           fetch('/api/tasks'),
           fetch('/api/time-logs'),
           fetch('/api/meetings'),
-          fetch('/api/leads')
+          fetch('/api/leads'),
+          fetch('/api/accounts'),
+          fetch('/api/manual-pendings'),
+          fetch('/api/leave-requests'),
+          fetch('/api/attendance'),
+          fetch('/api/salaries')
         ]);
         
         if (custRes.ok) setCustomers(await custRes.json());
@@ -107,12 +124,25 @@ export default function App() {
         if (timeRes.ok) setTimeLogs(await timeRes.json());
         if (meetRes.ok) setMeetings(await meetRes.json());
         if (leadsRes.ok) setLeads(await leadsRes.json());
+        if (accountsRes.ok) setAccounts(await accountsRes.json());
+        if (manRes.ok) setManualPendings(await manRes.json());
+        if (leaveRes.ok) setLeaveRequests(await leaveRes.json());
+        if (salRes.ok) setEmployeeSalaries(await salRes.json());
+        if (attRes.ok) {
+          const logs: AttendanceLog[] = await attRes.json();
+          setAttendanceLogs(logs);
+          // Check if current employee has an active clock-in session without clockOut
+          if (currentUser) {
+            const active = logs.find(a => a.employeeId === currentUser.id && !a.clockOut);
+            if (active) setCurrentClockInLog(active);
+          }
+        }
       } catch (err) {
         console.error("Error fetching data from API:", err);
       }
     };
     fetchData();
-  }, []);
+  }, [currentUser]);
 
   // Unread Notification Badge Count
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -418,6 +448,127 @@ export default function App() {
     }
   };
 
+  // Accounts CRUD
+  const handleAddAccount = (acc: AccountEntry) => {
+    setAccounts(p => [acc, ...p]);
+    fetch('/api/accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(acc) }).catch(console.error);
+  };
+  const handleUpdateAccount = (acc: AccountEntry) => {
+    setAccounts(p => p.map(a => a.id === acc.id ? acc : a));
+    fetch(`/api/accounts/${acc.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(acc) }).catch(console.error);
+  };
+  const handleDeleteAccount = (id: string) => {
+    setAccounts(p => p.filter(a => a.id !== id));
+    fetch(`/api/accounts/${id}`, { method: 'DELETE' }).catch(console.error);
+  };
+
+  // Clock In / Clock Out Attendance Handlers
+  const handleClockIn = () => {
+    if (!currentUser) return;
+    const nowStr = new Date().toISOString();
+    const todayStr = new Date().toISOString().split('T')[0];
+    const newLog: AttendanceLog = {
+      id: `att-${Date.now()}`,
+      employeeId: currentUser.id,
+      employeeName: currentUser.name,
+      clockIn: nowStr,
+      date: todayStr,
+    };
+    setAttendanceLogs(prev => [newLog, ...prev]);
+    setCurrentClockInLog(newLog);
+    fetch('/api/attendance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newLog)
+    }).catch(console.error);
+  };
+
+  const handleClockOut = () => {
+    if (!currentClockInLog) return;
+    const nowStr = new Date().toISOString();
+    const startTime = new Date(currentClockInLog.clockIn).getTime();
+    const endTime = new Date(nowStr).getTime();
+    const durationMins = Math.max(0, Math.floor((endTime - startTime) / 60000));
+
+    const updatedLog: AttendanceLog = {
+      ...currentClockInLog,
+      clockOut: nowStr,
+      durationMinutes: durationMins,
+    };
+
+    setAttendanceLogs(prev => prev.map(a => a.id === currentClockInLog.id ? updatedLog : a));
+    setCurrentClockInLog(null);
+
+    fetch(`/api/attendance/${currentClockInLog.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clockOut: nowStr, durationMinutes: durationMins })
+    }).catch(console.error);
+  };
+
+  // Manual Pendings CRUD
+  const handleAddManualPending = (entry: ManualPendingEntry) => {
+    setManualPendings(prev => [entry, ...prev]);
+    fetch('/api/manual-pendings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry)
+    }).catch(console.error);
+  };
+
+  const handleDeleteManualPending = (id: string) => {
+    setManualPendings(prev => prev.filter(m => m.id !== id));
+    fetch(`/api/manual-pendings/${id}`, { method: 'DELETE' }).catch(console.error);
+  };
+
+  // Leave Requests CRUD
+  const handleAddLeaveRequest = (req: LeaveRequest) => {
+    setLeaveRequests(prev => [req, ...prev]);
+    fetch('/api/leave-requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req)
+    }).catch(console.error);
+  };
+
+  const handleUpdateLeaveStatus = (id: string, status: 'Approved' | 'Rejected') => {
+    setLeaveRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+    fetch(`/api/leave-requests/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    }).catch(console.error);
+  };
+
+  const handleDeleteLeaveRequest = (id: string) => {
+    setLeaveRequests(prev => prev.filter(r => r.id !== id));
+    fetch(`/api/leave-requests/${id}`, { method: 'DELETE' }).catch(console.error);
+  };
+
+  // Employee Salaries CRUD
+  const handleAddSalary = (s: EmployeeSalary) => {
+    setEmployeeSalaries(prev => [s, ...prev]);
+    fetch('/api/salaries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(s)
+    }).catch(console.error);
+  };
+
+  const handleUpdateSalary = (s: EmployeeSalary) => {
+    setEmployeeSalaries(prev => prev.map(item => item.id === s.id ? s : item));
+    fetch(`/api/salaries/${s.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(s)
+    }).catch(console.error);
+  };
+
+  const handleDeleteSalary = (id: string) => {
+    setEmployeeSalaries(prev => prev.filter(item => item.id !== id));
+    fetch(`/api/salaries/${id}`, { method: 'DELETE' }).catch(console.error);
+  };
+
   // Nav Links Configuration
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard },
@@ -426,7 +577,11 @@ export default function App() {
     { name: 'Quotations', icon: FileText },
     { name: 'Invoices', icon: FileText },
     { name: 'Payments', icon: CreditCard },
+    { name: 'Client Pendings', icon: ShieldAlert },
+    { name: 'Accounts', icon: Wallet },
     { name: 'Employees', icon: Users },
+    { name: 'Salaries', icon: DollarSign },
+    { name: 'Leave Requests', icon: Calendar },
     { name: 'Tasks', icon: CheckSquare },
     { name: 'Time Logs', icon: Clock },
     { name: 'Meetings', icon: Calendar },
@@ -474,6 +629,27 @@ export default function App() {
 
         {/* Utilities shortcuts */}
         <div className="flex items-center gap-4">
+          {/* Employee Clock In / Clock Out attendance button */}
+          {currentClockInLog ? (
+            <button
+              onClick={handleClockOut}
+              className="flex items-center gap-2 bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-2xs"
+              title="Click to Clock Out"
+            >
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+              <span>Clocked In (Clock Out)</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleClockIn}
+              className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-2xs"
+              title="Click to Clock In"
+            >
+              <Clock className="w-4 h-4 text-emerald-600" />
+              <span>Clock In</span>
+            </button>
+          )}
+
           {/* Notifications bell shortcut */}
           <button
             onClick={() => setActiveTab('Notifications')}
@@ -652,6 +828,28 @@ export default function App() {
             />
           )}
 
+          {activeTab === 'Client Pendings' && (
+            <ClientPendingPayments
+              invoices={invoices}
+              customers={customers}
+              manualPendings={manualPendings}
+              onAddManualPending={handleAddManualPending}
+              onDeleteManualPending={handleDeleteManualPending}
+              pendingPaymentsPin={settings.pendingPaymentsPin || '2025'}
+            />
+          )}
+
+          {activeTab === 'Leave Requests' && (
+            <LeaveApprovalManagement
+              leaveRequests={leaveRequests}
+              employees={employees}
+              currentUser={currentUser}
+              onAddLeaveRequest={handleAddLeaveRequest}
+              onUpdateLeaveStatus={handleUpdateLeaveStatus}
+              onDeleteLeaveRequest={handleDeleteLeaveRequest}
+            />
+          )}
+
           {activeTab === 'Filters' && (
             <FilterSystem
               invoices={invoices}
@@ -700,6 +898,16 @@ export default function App() {
             <EmployeeManagement employees={employees} onAdd={handleAddEmployee} onUpdate={handleUpdateEmployee} onDelete={handleDeleteEmployee} />
           )}
 
+          {activeTab === 'Salaries' && (
+            <EmployeeSalaryManagement
+              salaries={employeeSalaries}
+              employees={employees}
+              onAddSalary={handleAddSalary}
+              onUpdateSalary={handleUpdateSalary}
+              onDeleteSalary={handleDeleteSalary}
+            />
+          )}
+
           {activeTab === 'Tasks' && (
             <TaskManagement tasks={tasks} employees={employees} onAdd={handleAddTask} onUpdate={handleUpdateTask} onDelete={handleDeleteTask} />
           )}
@@ -720,6 +928,18 @@ export default function App() {
               onDeleteLead={handleDeleteLead}
               onConvertLead={handleConvertLead}
               leadsPin={settings.leadsPin || '1234'}
+            />
+          )}
+
+          {activeTab === 'Accounts' && (
+            <Accounts
+              accounts={accounts}
+              onAddAccount={handleAddAccount}
+              onUpdateAccount={handleUpdateAccount}
+              onDeleteAccount={handleDeleteAccount}
+              accountsPin={settings.accountsPin || '2807'}
+              companyName={settings.companyName || 'Skenetic Digital'}
+              logoUrl={settings.logoUrl || '/logo.png'}
             />
           )}
         </main>

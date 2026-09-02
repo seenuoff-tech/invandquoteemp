@@ -225,21 +225,70 @@ app.get('/api/settings', async (req, res) => {
 
 app.post('/api/settings', async (req, res) => {
   try {
-    const { companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix, leadsPin } = req.body;
+    const { companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, gpayQrUrl, invoicePrefix, quotationPrefix, leadsPin, accountsPin, pendingPaymentsPin } = req.body;
     
     // Check if exists
     const [rows] = await pool.query('SELECT id FROM settings WHERE id=1');
     if (rows.length === 0) {
       await pool.query(
-        'INSERT INTO settings (id, companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix, leadsPin) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix, leadsPin || '1234']
+        'INSERT INTO settings (id, companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, gpayQrUrl, invoicePrefix, quotationPrefix, leadsPin, accountsPin, pendingPaymentsPin) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, gpayQrUrl || '', invoicePrefix, quotationPrefix, leadsPin || '1234', accountsPin || '2807', pendingPaymentsPin || '2025']
       );
     } else {
       await pool.query(
-        'UPDATE settings SET companyName=?, logoUrl=?, address=?, phone=?, email=?, bankName=?, bankAccount=?, bankIfsc=?, upiId=?, gpayNumber=?, invoicePrefix=?, quotationPrefix=?, leadsPin=? WHERE id=1',
-        [companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, invoicePrefix, quotationPrefix, leadsPin || '1234']
+        'UPDATE settings SET companyName=?, logoUrl=?, address=?, phone=?, email=?, bankName=?, bankAccount=?, bankIfsc=?, upiId=?, gpayNumber=?, gpayQrUrl=?, invoicePrefix=?, quotationPrefix=?, leadsPin=?, accountsPin=?, pendingPaymentsPin=? WHERE id=1',
+        [companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, gpayQrUrl || '', invoicePrefix, quotationPrefix, leadsPin || '1234', accountsPin || '2807', pendingPaymentsPin || '2025']
       );
     }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- ACCOUNTS ---
+app.get('/api/accounts', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM accounts ORDER BY date DESC, createdAt DESC');
+    const accounts = rows.map(r => ({
+      ...r,
+      amount: parseFloat(r.amount)
+    }));
+    res.json(accounts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/accounts', async (req, res) => {
+  try {
+    const { id, type, date, category, amount, description, createdAt } = req.body;
+    await pool.query(
+      'INSERT INTO accounts (id, type, date, category, amount, description, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, type, date, category, amount, description, createdAt]
+    );
+    res.json({ success: true, id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/accounts/:id', async (req, res) => {
+  try {
+    const { type, date, category, amount, description } = req.body;
+    await pool.query(
+      'UPDATE accounts SET type=?, date=?, category=?, amount=?, description=? WHERE id=?',
+      [type, date, category, amount, description, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/accounts/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM accounts WHERE id=?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -593,6 +642,173 @@ app.put('/api/meetings/:id', async (req, res) => {
 app.delete('/api/meetings/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM meetings WHERE id=?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- MANUAL PENDINGS ---
+app.get('/api/manual-pendings', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM manual_pendings ORDER BY createdAt DESC');
+    const data = rows.map(r => ({
+      ...r,
+      totalAmount: parseFloat(r.totalAmount),
+      paidAmount: parseFloat(r.paidAmount),
+      balanceAmount: parseFloat(r.balanceAmount)
+    }));
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/manual-pendings', async (req, res) => {
+  try {
+    const { id, customerId, clientName, mobile, totalAmount, paidAmount, balanceAmount, dueDate, notes, createdAt } = req.body;
+    await pool.query(
+      'INSERT INTO manual_pendings (id, customerId, clientName, mobile, totalAmount, paidAmount, balanceAmount, dueDate, notes, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, customerId || null, clientName, mobile || '', totalAmount, paidAmount || 0, balanceAmount, dueDate || '', notes || '', createdAt || new Date().toISOString().split('T')[0]]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/manual-pendings/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM manual_pendings WHERE id=?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- LEAVE REQUESTS ---
+app.get('/api/leave-requests', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM leave_requests ORDER BY createdAt DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/leave-requests', async (req, res) => {
+  try {
+    const { id, employeeId, employeeName, leaveType, startDate, endDate, reason, status, createdAt } = req.body;
+    await pool.query(
+      'INSERT INTO leave_requests (id, employeeId, employeeName, leaveType, startDate, endDate, reason, status, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, employeeId, employeeName, leaveType, startDate, endDate, reason || '', status || 'Pending', createdAt || new Date().toISOString().split('T')[0]]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/leave-requests/:id', async (req, res) => {
+  try {
+    const { status } = req.body;
+    await pool.query('UPDATE leave_requests SET status=? WHERE id=?', [status, req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/leave-requests/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM leave_requests WHERE id=?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- ATTENDANCE LOGS ---
+app.get('/api/attendance', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM attendance_logs ORDER BY clockIn DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/attendance', async (req, res) => {
+  try {
+    const { id, employeeId, employeeName, clockIn, clockOut, durationMinutes, date } = req.body;
+    await pool.query(
+      'INSERT INTO attendance_logs (id, employeeId, employeeName, clockIn, clockOut, durationMinutes, date) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, employeeId, employeeName, clockIn, clockOut || null, durationMinutes || 0, date || new Date().toISOString().split('T')[0]]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/attendance/:id', async (req, res) => {
+  try {
+    const { clockOut, durationMinutes } = req.body;
+    await pool.query(
+      'UPDATE attendance_logs SET clockOut=?, durationMinutes=? WHERE id=?',
+      [clockOut, durationMinutes, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- EMPLOYEE SALARIES ---
+app.get('/api/salaries', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM employee_salaries ORDER BY month DESC, createdAt DESC');
+    const salaries = rows.map(r => ({
+      ...r,
+      salaryAmount: parseFloat(r.salaryAmount),
+      paidAmount: parseFloat(r.paidAmount),
+      balanceAmount: parseFloat(r.balanceAmount)
+    }));
+    res.json(salaries);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/salaries', async (req, res) => {
+  try {
+    const { id, employeeId, employeeName, month, salaryAmount, paidAmount, balanceAmount, status, paidDate, paymentMethod, notes, createdAt } = req.body;
+    await pool.query(
+      'INSERT INTO employee_salaries (id, employeeId, employeeName, month, salaryAmount, paidAmount, balanceAmount, status, paidDate, paymentMethod, notes, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, employeeId, employeeName, month, salaryAmount, paidAmount || 0, balanceAmount, status || 'Unpaid', paidDate || '', paymentMethod || '', notes || '', createdAt || new Date().toISOString().split('T')[0]]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/salaries/:id', async (req, res) => {
+  try {
+    const { salaryAmount, paidAmount, balanceAmount, status, paidDate, paymentMethod, notes } = req.body;
+    await pool.query(
+      'UPDATE employee_salaries SET salaryAmount=?, paidAmount=?, balanceAmount=?, status=?, paidDate=?, paymentMethod=?, notes=? WHERE id=?',
+      [salaryAmount, paidAmount, balanceAmount, status, paidDate, paymentMethod, notes, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/salaries/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM employee_salaries WHERE id=?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

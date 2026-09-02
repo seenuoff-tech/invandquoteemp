@@ -77,10 +77,13 @@ export interface AdminSettings {
   bankIfsc: string;
   upiId: string;
   gpayNumber: string;
+  gpayQrUrl?: string;
   invoicePrefix: string;
   quotationPrefix: string;
 
   leadsPin?: string;
+  accountsPin?: string;
+  pendingPaymentsPin?: string;
 }
 
 export interface AppNotification {
@@ -145,5 +148,69 @@ export interface Lead {
   mobile: string;
   notes?: string;
   status: LeadStatus;
+  createdAt: string;
+}
+
+export interface AccountEntry {
+  id: string;
+  type: 'income' | 'expense';
+  date: string;
+  category: string;
+  amount: number;
+  description: string;
+  createdAt: string;
+}
+
+export interface ManualPendingEntry {
+  id: string;
+  customerId?: string;
+  clientName: string;
+  mobile?: string;
+  totalAmount: number;
+  paidAmount: number;
+  balanceAmount: number;
+  dueDate: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface LeaveRequest {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  leaveType: string; // 'Casual Leave' | 'Sick Leave' | 'Earned Leave' | 'Other'
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: LeaveStatus;
+  createdAt: string;
+}
+
+export interface AttendanceLog {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  clockIn: string;
+  clockOut?: string;
+  durationMinutes?: number;
+  date: string;
+}
+
+export type SalaryStatus = 'Paid' | 'Unpaid' | 'Partially Paid';
+
+export interface EmployeeSalary {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  month: string; // YYYY-MM
+  salaryAmount: number;
+  paidAmount: number;
+  balanceAmount: number;
+  status: SalaryStatus;
+  paidDate?: string;
+  paymentMethod?: string; // 'Bank Transfer' | 'GPay / UPI' | 'Cash'
+  notes?: string;
   createdAt: string;
 }

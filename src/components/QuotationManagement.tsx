@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import { generateDocumentPDF } from '../utils/pdfGenerator';
+import { exportQuotationsToExcel } from '../utils/excelExporter';
 import WhatsAppShareModal from './WhatsAppShareModal';
 
 interface QuotationManagementProps {
@@ -238,14 +239,25 @@ export default function QuotationManagement({
           <p className="text-sm text-slate-500">Create commercial proposals, generate quotations, and convert them to invoices.</p>
         </div>
         {!isFormOpen && (
-          <button
-            onClick={openCreateForm}
-            id="new-quotation-btn"
-            className="flex items-center justify-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition shadow-sm cursor-pointer self-start sm:self-auto animate-fade-in"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Quotation</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={() => exportQuotationsToExcel(quotations, customers)}
+              className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-xs font-bold px-3 py-2.5 rounded-xl transition cursor-pointer shadow-2xs"
+              title="Export all quotations to Excel / CSV"
+            >
+              <Download className="w-4 h-4 text-emerald-600" />
+              <span>Export to Excel</span>
+            </button>
+
+            <button
+              onClick={openCreateForm}
+              id="new-quotation-btn"
+              className="flex items-center justify-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-800 transition shadow-sm cursor-pointer animate-fade-in"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Quotation</span>
+            </button>
+          </div>
         )}
       </div>
 

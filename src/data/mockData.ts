@@ -59,7 +59,10 @@ export const defaultSettings: AdminSettings = {
   upiId: 'skenetic@svt',
   gpayNumber: '9876543210',
   invoicePrefix: 'INV',
-  quotationPrefix: 'QUO'
+  quotationPrefix: 'QUO',
+  leadsPin: '1234',
+  accountsPin: '2807',
+  pendingPaymentsPin: '2025'
 };
 
 export const initialQuotations: Quotation[] = [

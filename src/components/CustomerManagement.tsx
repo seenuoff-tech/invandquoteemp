@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Customer, Invoice, Quotation } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, Phone, MapPin, FileText, User, Users, Briefcase, IndianRupee, X } from 'lucide-react';
+import { Download, Plus, Search, Edit2, Trash2, Mail, Phone, MapPin, FileText, User, Users, Briefcase, IndianRupee, X } from 'lucide-react';
+import { exportCustomersToExcel } from '../utils/excelExporter';
 
 interface CustomerManagementProps {
   customers: Customer[];
@@ -145,14 +146,25 @@ export default function CustomerManagement({
           <h1 className="text-2xl font-semibold text-slate-800">Customer Management</h1>
           <p className="text-sm text-slate-500">Add, edit, and view details about your business clients.</p>
         </div>
-        <button
-          onClick={openAddModal}
-          id="add-customer-btn"
-          className="flex items-center justify-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition shadow-sm cursor-pointer self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Customer</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => exportCustomersToExcel(customers, invoices)}
+            className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-xs font-bold px-3 py-2.5 rounded-xl transition cursor-pointer shadow-2xs"
+            title="Export all customers to Excel / CSV"
+          >
+            <Download className="w-4 h-4 text-emerald-600" />
+            <span>Export Customers</span>
+          </button>
+
+          <button
+            onClick={openAddModal}
+            id="add-customer-btn"
+            className="flex items-center justify-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-800 transition shadow-sm cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Customer</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
