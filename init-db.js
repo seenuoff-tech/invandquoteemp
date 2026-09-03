@@ -96,16 +96,26 @@ async function initDB() {
         quotationPrefix VARCHAR(50),
         leadsPin VARCHAR(10),
         accountsPin VARCHAR(10),
-        pendingPaymentsPin VARCHAR(10)
+        pendingPaymentsPin VARCHAR(10),
+        whatsappInvoiceTemplate TEXT,
+        whatsappQuotationTemplate TEXT,
+        whatsappReminderTemplate TEXT,
+        feedbackUrl VARCHAR(500),
+        googleReviewUrl VARCHAR(500)
       )
     `);
 
-    // Alter existing settings table to add leadsPin if not present (safe migration — must run BEFORE INSERT)
+    // Alter existing settings table for migrations
     try {
       await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS leadsPin VARCHAR(10)`);
       await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS accountsPin VARCHAR(10)`);
       await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS pendingPaymentsPin VARCHAR(10)`);
       await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS gpayQrUrl VARCHAR(500)`);
+      await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS whatsappInvoiceTemplate TEXT`);
+      await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS whatsappQuotationTemplate TEXT`);
+      await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS whatsappReminderTemplate TEXT`);
+      await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS feedbackUrl VARCHAR(500)`);
+      await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS googleReviewUrl VARCHAR(500)`);
     } catch (_) { /* column may already exist */ }
 
     // Insert default settings if not exists

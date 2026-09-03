@@ -98,6 +98,12 @@ export interface AdminSettings {
   leadsPin?: string;
   accountsPin?: string;
   pendingPaymentsPin?: string;
+
+  whatsappInvoiceTemplate?: string;
+  whatsappQuotationTemplate?: string;
+  whatsappReminderTemplate?: string;
+  feedbackUrl?: string;
+  googleReviewUrl?: string;
 }
 
 export interface AppNotification {

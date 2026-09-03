@@ -24,6 +24,22 @@ function buildMessage(
   const inv = doc as Invoice;
   const quot = doc as Quotation;
 
+  const customTemplate = isInvoice ? settings.whatsappInvoiceTemplate : settings.whatsappQuotationTemplate;
+
+  if (customTemplate && customTemplate.trim() !== '') {
+    let msg = customTemplate
+      .replace(/\{customerName\}/g, customer?.name || 'Client')
+      .replace(/\{docNumber\}/g, isInvoice ? inv.number : quot.number)
+      .replace(/\{grandTotal\}/g, `₹${doc.grandTotal.toFixed(2)}`)
+      .replace(/\{balance\}/g, isInvoice ? `₹${inv.balance.toFixed(2)}` : '₹0.00')
+      .replace(/\{companyName\}/g, settings.companyName);
+
+    if (settings.googleReviewUrl || settings.feedbackUrl) {
+      msg += `\n\n⭐ *Rate Our Service:* ${settings.googleReviewUrl || settings.feedbackUrl}`;
+    }
+    return msg;
+  }
+
   const greeting = customer?.name ? `Hi *${customer.name}*,` : 'Hello,';
   const docLabel = isInvoice ? 'Invoice' : 'Quotation';
   const docNum = isInvoice ? inv.number : quot.number;

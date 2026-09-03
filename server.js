@@ -227,19 +227,19 @@ app.get('/api/settings', async (req, res) => {
 
 app.post('/api/settings', async (req, res) => {
   try {
-    const { companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, gpayQrUrl, invoicePrefix, quotationPrefix, leadsPin, accountsPin, pendingPaymentsPin } = req.body;
+    const { companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, gpayQrUrl, invoicePrefix, quotationPrefix, leadsPin, accountsPin, pendingPaymentsPin, whatsappInvoiceTemplate, whatsappQuotationTemplate, whatsappReminderTemplate, feedbackUrl, googleReviewUrl } = req.body;
     
     // Check if exists
     const [rows] = await pool.query('SELECT id FROM settings WHERE id=1');
     if (rows.length === 0) {
       await pool.query(
-        'INSERT INTO settings (id, companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, gpayQrUrl, invoicePrefix, quotationPrefix, leadsPin, accountsPin, pendingPaymentsPin) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, gpayQrUrl || '', invoicePrefix, quotationPrefix, leadsPin || '1234', accountsPin || '2807', pendingPaymentsPin || '2025']
+        'INSERT INTO settings (id, companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, gpayQrUrl, invoicePrefix, quotationPrefix, leadsPin, accountsPin, pendingPaymentsPin, whatsappInvoiceTemplate, whatsappQuotationTemplate, whatsappReminderTemplate, feedbackUrl, googleReviewUrl) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, gpayQrUrl || '', invoicePrefix, quotationPrefix, leadsPin || '1234', accountsPin || '2807', pendingPaymentsPin || '2025', whatsappInvoiceTemplate || '', whatsappQuotationTemplate || '', whatsappReminderTemplate || '', feedbackUrl || '', googleReviewUrl || '']
       );
     } else {
       await pool.query(
-        'UPDATE settings SET companyName=?, logoUrl=?, address=?, phone=?, email=?, bankName=?, bankAccount=?, bankIfsc=?, upiId=?, gpayNumber=?, gpayQrUrl=?, invoicePrefix=?, quotationPrefix=?, leadsPin=?, accountsPin=?, pendingPaymentsPin=? WHERE id=1',
-        [companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, gpayQrUrl || '', invoicePrefix, quotationPrefix, leadsPin || '1234', accountsPin || '2807', pendingPaymentsPin || '2025']
+        'UPDATE settings SET companyName=?, logoUrl=?, address=?, phone=?, email=?, bankName=?, bankAccount=?, bankIfsc=?, upiId=?, gpayNumber=?, gpayQrUrl=?, invoicePrefix=?, quotationPrefix=?, leadsPin=?, accountsPin=?, pendingPaymentsPin=?, whatsappInvoiceTemplate=?, whatsappQuotationTemplate=?, whatsappReminderTemplate=?, feedbackUrl=?, googleReviewUrl=? WHERE id=1',
+        [companyName, logoUrl, address, phone, email, bankName, bankAccount, bankIfsc, upiId, gpayNumber, gpayQrUrl || '', invoicePrefix, quotationPrefix, leadsPin || '1234', accountsPin || '2807', pendingPaymentsPin || '2025', whatsappInvoiceTemplate || '', whatsappQuotationTemplate || '', whatsappReminderTemplate || '', feedbackUrl || '', googleReviewUrl || '']
       );
     }
     res.json({ success: true });

@@ -291,9 +291,44 @@ export default function PrintView({ document, customers, settings, onClose }: Pr
               </div>
             </div>
 
+            {/* Client Rating & Feedback Banner */}
+            {(settings.googleReviewUrl || settings.feedbackUrl) && (
+              <div className="pt-4 border-t border-slate-200 flex items-center justify-between bg-amber-50/60 p-3 rounded-lg border border-amber-200/80 text-xs">
+                <div>
+                  <div className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
+                    <span className="text-amber-500 font-extrabold text-sm">⭐⭐⭐⭐⭐</span>
+                    <span>Rate Our Service & Feedback</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Your feedback helps us serve you better!</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {settings.googleReviewUrl && (
+                    <a
+                      href={settings.googleReviewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-amber-500 hover:bg-amber-600 text-white text-3xxs font-extrabold px-3 py-1.5 rounded-md transition shadow-2xs no-underline"
+                    >
+                      Google 5-Star Review
+                    </a>
+                  )}
+                  {settings.feedbackUrl && (
+                    <a
+                      href={settings.feedbackUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-slate-800 hover:bg-slate-900 text-white text-3xxs font-extrabold px-3 py-1.5 rounded-md transition shadow-2xs no-underline"
+                    >
+                      Give Feedback
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Clean Professional Footer Note */}
             {item.notes && (
-              <div className="pt-6 border-t border-slate-200 text-xs text-slate-500">
+              <div className="pt-4 border-t border-slate-200 text-xs text-slate-500">
                 <span className="font-bold text-slate-700 uppercase tracking-wide">Notes / Terms:</span> {item.notes}
               </div>
             )}

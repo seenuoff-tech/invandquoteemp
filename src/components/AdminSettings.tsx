@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AdminSettings } from '../types';
-import { Save, Settings, Landmark, FileText, CheckCircle, Lock, Upload, Image as ImageIcon, X } from 'lucide-react';
+import { Save, Settings, Landmark, FileText, CheckCircle, Lock, Upload, Image as ImageIcon, X, MessageSquare, Star } from 'lucide-react';
 
 interface AdminSettingsProps {
   settings: AdminSettings;
@@ -300,6 +300,92 @@ export default function AdminSettingsPanel({ settings, onSave }: AdminSettingsPr
             </div>
 
 
+          </div>
+        </div>
+
+        {/* Communication & Message Templates */}
+        <div className="bg-white rounded-xl border border-slate-100 p-6 space-y-4">
+          <div className="flex items-center gap-2 text-slate-800 font-medium border-b border-slate-50 pb-3">
+            <MessageSquare className="w-5 h-5 text-indigo-500" />
+            <span>Custom WhatsApp & Email Message Templates</span>
+          </div>
+
+          <p className="text-xs text-slate-500">
+            Customize default share messages. Placeholders: <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-bold font-mono">{'{customerName}'}</code>, <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-bold font-mono">{'{docNumber}'}</code>, <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-bold font-mono">{'{grandTotal}'}</code>, <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-bold font-mono">{'{balance}'}</code>, <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-bold font-mono">{'{companyName}'}</code>.
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">WhatsApp Invoice Template</label>
+              <textarea
+                name="whatsappInvoiceTemplate"
+                value={formData.whatsappInvoiceTemplate || ''}
+                onChange={handleChange}
+                rows={3}
+                placeholder="Hi {customerName}, Please find attached Invoice {docNumber} for {grandTotal} from {companyName}. Balance: {balance}."
+                className="w-full text-xs border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">WhatsApp Quotation Template</label>
+              <textarea
+                name="whatsappQuotationTemplate"
+                value={formData.whatsappQuotationTemplate || ''}
+                onChange={handleChange}
+                rows={3}
+                placeholder="Hi {customerName}, Please find commercial Quotation {docNumber} for {grandTotal} from {companyName}."
+                className="w-full text-xs border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">WhatsApp Payment Reminder Template</label>
+              <textarea
+                name="whatsappReminderTemplate"
+                value={formData.whatsappReminderTemplate || ''}
+                onChange={handleChange}
+                rows={3}
+                placeholder="Hi {customerName}, Friendly reminder regarding pending payment of {balance} for Invoice {docNumber} from {companyName}."
+                className="w-full text-xs border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Client Rating & Feedback Links */}
+        <div className="bg-white rounded-xl border border-slate-100 p-6 space-y-4">
+          <div className="flex items-center gap-2 text-slate-800 font-medium border-b border-slate-50 pb-3">
+            <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+            <span>Client Rating & Google Review Links</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Google Review URL</label>
+              <input
+                type="text"
+                name="googleReviewUrl"
+                value={formData.googleReviewUrl || ''}
+                onChange={handleChange}
+                placeholder="e.g. https://g.page/r/your-google-review-link/review"
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+              <p className="text-xxs text-slate-400 mt-1">Displays a ⭐⭐⭐⭐⭐ 5-Star Google Review link on paid invoice PDFs.</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Feedback Form URL</label>
+              <input
+                type="text"
+                name="feedbackUrl"
+                value={formData.feedbackUrl || ''}
+                onChange={handleChange}
+                placeholder="e.g. https://forms.gle/your-feedback-form-id"
+                className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+              <p className="text-xxs text-slate-400 mt-1">Displays a feedback link for clients to rate your service.</p>
+            </div>
           </div>
         </div>
 
