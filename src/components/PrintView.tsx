@@ -204,6 +204,26 @@ export default function PrintView({ document, customers, settings, onClose }: Pr
               </table>
             </div>
 
+            {/* Milestone Payment Terms Table */}
+            {item.milestones && item.milestones.length > 0 && (
+              <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 text-xs space-y-2">
+                <p className="font-bold text-indigo-900 uppercase tracking-wider text-xxs">MILESTONE PAYMENT SCHEDULE (PROJECT STAGES)</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {item.milestones.map((m, idx) => (
+                    <div key={m.id || idx} className="bg-white p-2.5 rounded border border-slate-200 text-xs flex justify-between items-center">
+                      <div>
+                        <div className="font-semibold text-slate-800 text-xxs">{m.name}</div>
+                        <div className="text-[10px] text-slate-400 font-bold">{m.percentage}% of Grand Total</div>
+                      </div>
+                      <div className="font-mono font-bold text-indigo-700 text-xs ml-2">
+                        ₹{(m.amount || (item.grandTotal * m.percentage) / 100).toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Ledger Totals & Bank/GPay Details */}
             <div className="flex justify-between items-start gap-8 pt-2">
               

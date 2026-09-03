@@ -39,7 +39,9 @@ async function initDB() {
         grandTotal DECIMAL(10, 2),
         notes TEXT,
         terms TEXT,
-        status VARCHAR(50)
+        status VARCHAR(50),
+        paymentTermsType VARCHAR(50),
+        milestones JSON
       )
     `);
 
@@ -61,9 +63,19 @@ async function initDB() {
         balance DECIMAL(10, 2),
         notes TEXT,
         status VARCHAR(50),
-        payments JSON
+        payments JSON,
+        paymentTermsType VARCHAR(50),
+        milestones JSON
       )
     `);
+
+    // Alter existing tables for milestones
+    try {
+      await pool.query(`ALTER TABLE quotations ADD COLUMN IF NOT EXISTS paymentTermsType VARCHAR(50)`);
+      await pool.query(`ALTER TABLE quotations ADD COLUMN IF NOT EXISTS milestones JSON`);
+      await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS paymentTermsType VARCHAR(50)`);
+      await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS milestones JSON`);
+    } catch (_) { /* columns may already exist */ }
 
     // Create Settings Table (singleton)
     await pool.query(`

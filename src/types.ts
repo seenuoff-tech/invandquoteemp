@@ -20,6 +20,16 @@ export interface LineItem {
 
 export type QuotationStatus = 'Draft' | 'Sent' | 'Approved' | 'Rejected' | 'Expired';
 
+export interface MilestonePayment {
+  id: string;
+  name: string; // e.g. "Milestone 1: 30% Advance Upon Booking"
+  percentage: number; // e.g. 30
+  amount: number; // e.g. 3000
+  dueDate?: string;
+  status: 'Pending' | 'Paid';
+  paidDate?: string;
+}
+
 export interface Quotation {
   id: string;
   number: string;
@@ -34,6 +44,8 @@ export interface Quotation {
   notes?: string;
   terms?: string;
   status: QuotationStatus;
+  paymentTermsType?: 'Standard' | 'Milestone';
+  milestones?: MilestonePayment[];
 }
 
 export type InvoiceStatus = 'Unpaid' | 'Partially Paid' | 'Paid' | 'Overdue';
@@ -63,6 +75,8 @@ export interface Invoice {
   notes?: string;
   status: InvoiceStatus;
   payments: PaymentRecord[];
+  paymentTermsType?: 'Standard' | 'Milestone';
+  milestones?: MilestonePayment[];
 }
 
 export interface AdminSettings {

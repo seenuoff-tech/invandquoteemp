@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Quotation, Customer, LineItem, QuotationStatus, AdminSettings } from '../types';
+import { Quotation, Customer, LineItem, QuotationStatus, AdminSettings, MilestonePayment } from '../types';
 import {
   Plus,
   Search,
@@ -61,6 +61,8 @@ export default function QuotationManagement({
   const [terms, setTerms] = useState('');
   const [status, setStatus] = useState<QuotationStatus>('Draft');
   const [quoNumber, setQuoNumber] = useState('');
+  const [paymentTermsType, setPaymentTermsType] = useState<'Standard' | 'Milestone'>('Standard');
+  const [milestones, setMilestones] = useState<MilestonePayment[]>([]);
 
   // WhatsApp Share Modal
   const [waShareQuotation, setWaShareQuotation] = useState<Quotation | null>(null);
@@ -94,13 +96,21 @@ export default function QuotationManagement({
     }
   }, [isFormOpen, editingQuotation, settings.quotationPrefix]);
 
+  const createStandard3Milestones = (totalAmount: number): MilestonePayment[] => [
+    { id: 'm1', name: 'Milestone 1: 30% Advance Upon Booking', percentage: 30, amount: (totalAmount * 30) / 100, status: 'Pending' },
+    { id: 'm2', name: 'Milestone 2: 40% Mid-way Project Delivery', percentage: 40, amount: (totalAmount * 40) / 100, status: 'Pending' },
+    { id: 'm3', name: 'Milestone 3: 30% Final Completion & Sign-off', percentage: 30, amount: (totalAmount * 30) / 100, status: 'Pending' },
+  ];
+
   const openCreateForm = () => {
     setEditingQuotation(null);
     setSelectedCustomerId(customers[0]?.id || '');
     setItems([{ id: '1', description: '', quantity: 1, unitPrice: 0, subtotal: 0 }]);
     setNotes('');
-    setTerms('Valid for 30 days. Payment terms: 50% advance, balance on completion.');
+    setTerms('Valid for 30 days. Standard milestone payment terms apply.');
     setStatus('Draft');
+    setPaymentTermsType('Standard');
+    setMilestones([]);
     setIsFormOpen(true);
   };
 
@@ -114,6 +124,8 @@ export default function QuotationManagement({
     setNotes(q.notes || '');
     setTerms(q.terms || '');
     setStatus(q.status);
+    setPaymentTermsType(q.paymentTermsType || 'Standard');
+    setMilestones(q.milestones || []);
     setIsFormOpen(true);
   };
 
@@ -180,6 +192,8 @@ export default function QuotationManagement({
       notes,
       terms,
       status: isDraft ? 'Draft' : (editingQuotation ? status : 'Sent'),
+      paymentTermsType,
+      milestones: paymentTermsType === 'Milestone' ? (milestones.length > 0 ? milestones : createStandard3Milestones(grandTotal)) : [],
     };
 
     if (editingQuotation) {
@@ -610,6 +624,105 @@ export default function QuotationManagement({
                 className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
+          </div>
+
+          {/* Payment Terms & Milestone Split */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">Payment Terms & Milestones</span>
+                <span className="text-xxs text-slate-500">Split project quotation into milestone payments (30% Advance / 40% Midway / 30% Final).</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentTermsType('Standard');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    paymentTermsType === 'Standard' ? 'bg-slate-800 text-white shadow-2xs' : 'bg-white text-slate-600 border border-slate-200'
+                  }`}
+                >
+                  Standard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentTermsType('Milestone');
+                    if (milestones.length === 0) {
+                      const grand = calculateTotals().grandTotal;
+                      setMilestones(createStandard3Milestones(grand));
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    paymentTermsType === 'Milestone' ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-white text-slate-600 border border-slate-200'
+                  }`}
+                >
+                  Milestone Terms (30/40/30)
+                </button>
+              </div>
+            </div>
+
+            {paymentTermsType === 'Milestone' && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200">
+                  <span className="text-xs font-bold text-slate-700">Milestone Schedule (30% / 40% / 30%)</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const grand = calculateTotals().grandTotal;
+                      setMilestones(createStandard3Milestones(grand));
+                    }}
+                    className="text-xxs font-bold text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
+                  >
+                    Reset 30-40-30 Split
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {milestones.map((m, idx) => (
+                    <div key={m.id || idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-lg border border-slate-200 text-xs">
+                      <div className="sm:col-span-6">
+                        <input
+                          type="text"
+                          value={m.name}
+                          onChange={(e) => {
+                            const updated = [...milestones];
+                            updated[idx].name = e.target.value;
+                            setMilestones(updated);
+                          }}
+                          className="w-full border border-slate-200 rounded p-1.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          placeholder="Milestone description..."
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={m.percentage}
+                            onChange={(e) => {
+                              const pct = parseFloat(e.target.value) || 0;
+                              const grand = calculateTotals().grandTotal;
+                              const updated = [...milestones];
+                              updated[idx].percentage = pct;
+                              updated[idx].amount = (grand * pct) / 100;
+                              setMilestones(updated);
+                            }}
+                            className="w-full border border-slate-200 rounded p-1.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          />
+                          <span className="text-slate-400 font-bold">%</span>
+                        </div>
+                      </div>
+                      <div className="sm:col-span-4 text-right font-bold text-slate-800 font-mono">
+                        ₹{(m.amount || (calculateTotals().grandTotal * m.percentage) / 100).toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {editingQuotation && (

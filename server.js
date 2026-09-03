@@ -108,6 +108,7 @@ app.get('/api/quotations', async (req, res) => {
     const quotations = rows.map(r => ({
       ...r,
       items: parseJSON(r.items, []),
+      milestones: parseJSON(r.milestones, []),
       subtotal: parseFloat(r.subtotal),
       taxRate: parseFloat(r.taxRate),
       taxAmount: parseFloat(r.taxAmount),
@@ -121,10 +122,10 @@ app.get('/api/quotations', async (req, res) => {
 
 app.post('/api/quotations', async (req, res) => {
   try {
-    const { id, number, customerId, date, validUntil, items, subtotal, taxRate, taxAmount, grandTotal, notes, terms, status } = req.body;
+    const { id, number, customerId, date, validUntil, items, subtotal, taxRate, taxAmount, grandTotal, notes, terms, status, paymentTermsType, milestones } = req.body;
     await pool.query(
-      'INSERT INTO quotations (id, number, customerId, date, validUntil, items, subtotal, taxRate, taxAmount, grandTotal, notes, terms, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, number, customerId, date, validUntil, JSON.stringify(items), subtotal, taxRate, taxAmount, grandTotal, notes, terms, status]
+      'INSERT INTO quotations (id, number, customerId, date, validUntil, items, subtotal, taxRate, taxAmount, grandTotal, notes, terms, status, paymentTermsType, milestones) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, number, customerId, date, validUntil, JSON.stringify(items), subtotal, taxRate, taxAmount, grandTotal, notes, terms, status, paymentTermsType || 'Standard', JSON.stringify(milestones || [])]
     );
     res.json({ success: true, id });
   } catch (err) {
@@ -134,10 +135,10 @@ app.post('/api/quotations', async (req, res) => {
 
 app.put('/api/quotations/:id', async (req, res) => {
   try {
-    const { number, customerId, date, validUntil, items, subtotal, taxRate, taxAmount, grandTotal, notes, terms, status } = req.body;
+    const { number, customerId, date, validUntil, items, subtotal, taxRate, taxAmount, grandTotal, notes, terms, status, paymentTermsType, milestones } = req.body;
     await pool.query(
-      'UPDATE quotations SET number=?, customerId=?, date=?, validUntil=?, items=?, subtotal=?, taxRate=?, taxAmount=?, grandTotal=?, notes=?, terms=?, status=? WHERE id=?',
-      [number, customerId, date, validUntil, JSON.stringify(items), subtotal, taxRate, taxAmount, grandTotal, notes, terms, status, req.params.id]
+      'UPDATE quotations SET number=?, customerId=?, date=?, validUntil=?, items=?, subtotal=?, taxRate=?, taxAmount=?, grandTotal=?, notes=?, terms=?, status=?, paymentTermsType=?, milestones=? WHERE id=?',
+      [number, customerId, date, validUntil, JSON.stringify(items), subtotal, taxRate, taxAmount, grandTotal, notes, terms, status, paymentTermsType || 'Standard', JSON.stringify(milestones || []), req.params.id]
     );
     res.json({ success: true });
   } catch (err) {
@@ -162,6 +163,7 @@ app.get('/api/invoices', async (req, res) => {
       ...r,
       items: parseJSON(r.items, []),
       payments: parseJSON(r.payments, []),
+      milestones: parseJSON(r.milestones, []),
       subtotal: parseFloat(r.subtotal),
       taxRate: parseFloat(r.taxRate),
       taxAmount: parseFloat(r.taxAmount),
@@ -177,10 +179,10 @@ app.get('/api/invoices', async (req, res) => {
 
 app.post('/api/invoices', async (req, res) => {
   try {
-    const { id, number, quotationId, customerId, date, dueDate, items, subtotal, taxRate, taxAmount, grandTotal, paidAmount, balance, notes, status, payments } = req.body;
+    const { id, number, quotationId, customerId, date, dueDate, items, subtotal, taxRate, taxAmount, grandTotal, paidAmount, balance, notes, status, payments, paymentTermsType, milestones } = req.body;
     await pool.query(
-      'INSERT INTO invoices (id, number, quotationId, customerId, date, dueDate, items, subtotal, taxRate, taxAmount, grandTotal, paidAmount, balance, notes, status, payments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, number, quotationId, customerId, date, dueDate, JSON.stringify(items), subtotal, taxRate, taxAmount, grandTotal, paidAmount, balance, notes, status, JSON.stringify(payments)]
+      'INSERT INTO invoices (id, number, quotationId, customerId, date, dueDate, items, subtotal, taxRate, taxAmount, grandTotal, paidAmount, balance, notes, status, payments, paymentTermsType, milestones) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, number, quotationId, customerId, date, dueDate, JSON.stringify(items), subtotal, taxRate, taxAmount, grandTotal, paidAmount, balance, notes, status, JSON.stringify(payments), paymentTermsType || 'Standard', JSON.stringify(milestones || [])]
     );
     res.json({ success: true, id });
   } catch (err) {
@@ -190,10 +192,10 @@ app.post('/api/invoices', async (req, res) => {
 
 app.put('/api/invoices/:id', async (req, res) => {
   try {
-    const { number, quotationId, customerId, date, dueDate, items, subtotal, taxRate, taxAmount, grandTotal, paidAmount, balance, notes, status, payments } = req.body;
+    const { number, quotationId, customerId, date, dueDate, items, subtotal, taxRate, taxAmount, grandTotal, paidAmount, balance, notes, status, payments, paymentTermsType, milestones } = req.body;
     await pool.query(
-      'UPDATE invoices SET number=?, quotationId=?, customerId=?, date=?, dueDate=?, items=?, subtotal=?, taxRate=?, taxAmount=?, grandTotal=?, paidAmount=?, balance=?, notes=?, status=?, payments=? WHERE id=?',
-      [number, quotationId, customerId, date, dueDate, JSON.stringify(items), subtotal, taxRate, taxAmount, grandTotal, paidAmount, balance, notes, status, JSON.stringify(payments), req.params.id]
+      'UPDATE invoices SET number=?, quotationId=?, customerId=?, date=?, dueDate=?, items=?, subtotal=?, taxRate=?, taxAmount=?, grandTotal=?, paidAmount=?, balance=?, notes=?, status=?, payments=?, paymentTermsType=?, milestones=? WHERE id=?',
+      [number, quotationId, customerId, date, dueDate, JSON.stringify(items), subtotal, taxRate, taxAmount, grandTotal, paidAmount, balance, notes, status, JSON.stringify(payments), paymentTermsType || 'Standard', JSON.stringify(milestones || []), req.params.id]
     );
     res.json({ success: true });
   } catch (err) {

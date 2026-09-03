@@ -55,9 +55,11 @@ export default function Accounts({ accounts, onAddAccount, onUpdateAccount, onDe
       setFormData(entry);
       setIsEditing(true);
     } else {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const defaultDate = todayStr.startsWith(filterMonth) ? todayStr : `${filterMonth}-01`;
       setFormData({
         type,
-        date: new Date().toISOString().split('T')[0],
+        date: defaultDate,
         category: type === 'income' ? incomeCategories[0] : expenseCategories[0],
         amount: 0,
         description: '',
@@ -513,32 +515,59 @@ export default function Accounts({ accounts, onAddAccount, onUpdateAccount, onDe
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-4 text-sm">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
+              {/* Month Context & Date Selection */}
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-700">Record Month & Date:</span>
+                  <span className="text-xxs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                    Month: {formData.date ? formData.date.slice(0, 7) : filterMonth}
+                  </span>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Amount *</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Select Month:</label>
                     <input
-                      type="number"
-                      required
-                      min="0.01"
-                      step="0.01"
-                      value={formData.amount || ''}
-                      onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
-                      className="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      placeholder="0.00"
+                      type="month"
+                      value={formData.date ? formData.date.slice(0, 7) : filterMonth}
+                      onChange={(e) => {
+                        const newMonth = e.target.value;
+                        if (newMonth) {
+                          const day = formData.date ? formData.date.slice(8) : '01';
+                          setFormData({ ...formData, date: `${newMonth}-${day}` });
+                        }
+                      }}
+                      className="w-full border border-slate-200 bg-white rounded-lg p-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Exact Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      className="w-full border border-slate-200 bg-white rounded-lg p-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Amount *</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
+                  <input
+                    type="number"
+                    required
+                    min="0.01"
+                    step="0.01"
+                    value={formData.amount || ''}
+                    onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
+                    className="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    placeholder="0.00"
+                  />
                 </div>
               </div>
 
