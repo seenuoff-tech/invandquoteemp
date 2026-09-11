@@ -3,8 +3,12 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import pool from './db.js';
 import crypto from 'crypto';
+import initDB from './init-db.js';
 
 dotenv.config();
+
+// Automatically ensure DB tables exist on startup
+initDB().catch(console.error);
 
 const app = express();
 const port = process.env.PORT || 5000;

@@ -89,7 +89,14 @@ export default function App() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [accounts, setAccounts] = useState<AccountEntry[]>([]);
-  const [manualPendings, setManualPendings] = useState<ManualPendingEntry[]>([]);
+  const [manualPendings, setManualPendings] = useState<ManualPendingEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem('sken_manual_pendings');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
   const [employeeSalaries, setEmployeeSalaries] = useState<EmployeeSalary[]>([]);
@@ -140,7 +147,11 @@ export default function App() {
         if (meetRes.ok) setMeetings(await meetRes.json());
         if (leadsRes.ok) setLeads(await leadsRes.json());
         if (accountsRes.ok) setAccounts(await accountsRes.json());
-        if (manRes.ok) setManualPendings(await manRes.json());
+        if (manRes.ok) {
+          const data = await manRes.json();
+          setManualPendings(data);
+          localStorage.setItem('sken_manual_pendings', JSON.stringify(data));
+        }
         if (leaveRes.ok) setLeaveRequests(await leaveRes.json());
         if (salRes.ok) setEmployeeSalaries(await salRes.json());
         if (attRes.ok) {
@@ -523,7 +534,11 @@ export default function App() {
 
   // Manual Pendings CRUD
   const handleAddManualPending = (entry: ManualPendingEntry) => {
-    setManualPendings(prev => [entry, ...prev]);
+    setManualPendings(prev => {
+      const updated = [entry, ...prev];
+      localStorage.setItem('sken_manual_pendings', JSON.stringify(updated));
+      return updated;
+    });
     fetch('/api/manual-pendings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -532,12 +547,20 @@ export default function App() {
   };
 
   const handleDeleteManualPending = (id: string) => {
-    setManualPendings(prev => prev.filter(m => m.id !== id));
+    setManualPendings(prev => {
+      const updated = prev.filter(m => m.id !== id);
+      localStorage.setItem('sken_manual_pendings', JSON.stringify(updated));
+      return updated;
+    });
     fetch(`/api/manual-pendings/${id}`, { method: 'DELETE' }).catch(console.error);
   };
 
   const handleUpdateManualPending = (entry: ManualPendingEntry) => {
-    setManualPendings(prev => prev.map(m => m.id === entry.id ? entry : m));
+    setManualPendings(prev => {
+      const updated = prev.map(m => m.id === entry.id ? entry : m);
+      localStorage.setItem('sken_manual_pendings', JSON.stringify(updated));
+      return updated;
+    });
     fetch(`/api/manual-pendings/${entry.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

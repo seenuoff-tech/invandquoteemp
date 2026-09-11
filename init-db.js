@@ -227,11 +227,13 @@ async function initDB() {
     `);
 
     console.log('All tables created successfully!');
-    process.exit(0);
   } catch (err) {
     console.error('Error initializing database:', err);
-    process.exit(1);
   }
 }
 
-initDB();
+export default initDB;
+
+if (process.argv[1] && process.argv[1].includes('init-db.js')) {
+  initDB().then(() => process.exit(0));
+}
