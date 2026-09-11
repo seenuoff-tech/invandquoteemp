@@ -536,6 +536,15 @@ export default function App() {
     fetch(`/api/manual-pendings/${id}`, { method: 'DELETE' }).catch(console.error);
   };
 
+  const handleUpdateManualPending = (entry: ManualPendingEntry) => {
+    setManualPendings(prev => prev.map(m => m.id === entry.id ? entry : m));
+    fetch(`/api/manual-pendings/${entry.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry)
+    }).catch(console.error);
+  };
+
   // Leave Requests CRUD
   const handleAddLeaveRequest = (req: LeaveRequest) => {
     setLeaveRequests(prev => [req, ...prev]);
@@ -868,7 +877,9 @@ export default function App() {
               customers={customers}
               manualPendings={manualPendings}
               onAddManualPending={handleAddManualPending}
+              onUpdateManualPending={handleUpdateManualPending}
               onDeleteManualPending={handleDeleteManualPending}
+              onUpdateInvoice={handleUpdateInvoice}
               pendingPaymentsPin={settings.pendingPaymentsPin || '2025'}
             />
           )}

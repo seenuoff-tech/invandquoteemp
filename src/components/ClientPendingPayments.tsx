@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Invoice, Customer, ManualPendingEntry } from '../types';
-import { Lock, AlertCircle, Search, IndianRupee, MessageCircle, FileText, CheckCircle2, Clock, Users, ArrowUpRight, ShieldCheck, Plus, Trash2, Download } from 'lucide-react';
+import { Invoice, Customer, ManualPendingEntry, InvoiceStatus, PaymentRecord } from '../types';
+import { Lock, AlertCircle, Search, IndianRupee, MessageCircle, FileText, CheckCircle2, Clock, Users, ArrowUpRight, ShieldCheck, Plus, Trash2, Download, Edit, CreditCard, Check } from 'lucide-react';
 import { exportClientPendingsToExcel } from '../utils/excelExporter';
 
 interface ClientPendingPaymentsProps {
@@ -8,7 +8,9 @@ interface ClientPendingPaymentsProps {
   customers: Customer[];
   manualPendings: ManualPendingEntry[];
   onAddManualPending: (entry: ManualPendingEntry) => void;
+  onUpdateManualPending?: (entry: ManualPendingEntry) => void;
   onDeleteManualPending: (id: string) => void;
+  onUpdateInvoice?: (inv: Invoice) => void;
   pendingPaymentsPin: string;
 }
 
@@ -17,7 +19,9 @@ export default function ClientPendingPayments({
   customers,
   manualPendings = [],
   onAddManualPending,
+  onUpdateManualPending,
   onDeleteManualPending,
+  onUpdateInvoice,
   pendingPaymentsPin = '2025',
 }: ClientPendingPaymentsProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -27,20 +31,33 @@ export default function ClientPendingPayments({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
-  // Manual Pending Modal State
+  // Today string for overdue checking
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // Manual Pending Modal State (Add & Edit)
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [editingManualEntryId, setEditingManualEntryId] = useState<string | null>(null);
   const [manualFormData, setManualFormData] = useState({
     customerId: '',
     clientName: '',
     mobile: '',
     totalAmount: 0,
     paidAmount: 0,
-    dueDate: new Date().toISOString().split('T')[0],
+    dueDate: todayStr,
     notes: '',
   });
 
-  // Today string for overdue checking
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Record Payment Modal State
+  const [paymentTarget, setPaymentTarget] = useState<{
+    type: 'manual' | 'invoice';
+    item: ManualPendingEntry | Invoice;
+  } | null>(null);
+  const [paymentFormData, setPaymentFormData] = useState({
+    amount: 0,
+    method: 'Bank Transfer',
+    date: todayStr,
+    notes: '',
+  });
 
   // Handle PIN Submission
   const handlePinSubmit = (e: React.FormEvent) => {
@@ -54,7 +71,37 @@ export default function ClientPendingPayments({
     }
   };
 
-  // Handle Manual Entry Submit
+  // Open Modal to Add New Manual Entry
+  const handleOpenAddManual = () => {
+    setEditingManualEntryId(null);
+    setManualFormData({
+      customerId: '',
+      clientName: '',
+      mobile: '',
+      totalAmount: 0,
+      paidAmount: 0,
+      dueDate: todayStr,
+      notes: '',
+    });
+    setIsManualModalOpen(true);
+  };
+
+  // Open Modal to Edit Existing Manual Entry
+  const handleOpenEditManual = (entry: ManualPendingEntry) => {
+    setEditingManualEntryId(entry.id);
+    setManualFormData({
+      customerId: entry.customerId || '',
+      clientName: entry.clientName,
+      mobile: entry.mobile || '',
+      totalAmount: entry.totalAmount,
+      paidAmount: entry.paidAmount,
+      dueDate: entry.dueDate || todayStr,
+      notes: entry.notes || '',
+    });
+    setIsManualModalOpen(true);
+  };
+
+  // Handle Manual Entry Submit (Add or Edit)
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualFormData.clientName.trim()) {
@@ -62,29 +109,119 @@ export default function ClientPendingPayments({
       return;
     }
     const balance = Math.max(0, manualFormData.totalAmount - manualFormData.paidAmount);
-    const newEntry: ManualPendingEntry = {
-      id: `man-pend-${Date.now()}`,
-      customerId: manualFormData.customerId || undefined,
-      clientName: manualFormData.clientName,
-      mobile: manualFormData.mobile,
-      totalAmount: Number(manualFormData.totalAmount),
-      paidAmount: Number(manualFormData.paidAmount),
-      balanceAmount: balance,
-      dueDate: manualFormData.dueDate,
-      notes: manualFormData.notes,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    onAddManualPending(newEntry);
+
+    if (editingManualEntryId) {
+      const existing = manualPendings.find((m) => m.id === editingManualEntryId);
+      const updatedEntry: ManualPendingEntry = {
+        id: editingManualEntryId,
+        customerId: manualFormData.customerId || undefined,
+        clientName: manualFormData.clientName,
+        mobile: manualFormData.mobile,
+        totalAmount: Number(manualFormData.totalAmount),
+        paidAmount: Number(manualFormData.paidAmount),
+        balanceAmount: balance,
+        dueDate: manualFormData.dueDate,
+        notes: manualFormData.notes,
+        createdAt: existing ? existing.createdAt : todayStr,
+      };
+      if (onUpdateManualPending) {
+        onUpdateManualPending(updatedEntry);
+      }
+    } else {
+      const newEntry: ManualPendingEntry = {
+        id: `man-pend-${Date.now()}`,
+        customerId: manualFormData.customerId || undefined,
+        clientName: manualFormData.clientName,
+        mobile: manualFormData.mobile,
+        totalAmount: Number(manualFormData.totalAmount),
+        paidAmount: Number(manualFormData.paidAmount),
+        balanceAmount: balance,
+        dueDate: manualFormData.dueDate,
+        notes: manualFormData.notes,
+        createdAt: todayStr,
+      };
+      onAddManualPending(newEntry);
+    }
+
     setIsManualModalOpen(false);
+    setEditingManualEntryId(null);
     setManualFormData({
       customerId: '',
       clientName: '',
       mobile: '',
       totalAmount: 0,
       paidAmount: 0,
-      dueDate: new Date().toISOString().split('T')[0],
+      dueDate: todayStr,
       notes: '',
     });
+  };
+
+  // Open Record Payment Modal
+  const handleOpenPaymentModal = (type: 'manual' | 'invoice', item: ManualPendingEntry | Invoice) => {
+    const remainingBalance =
+      type === 'manual'
+        ? (item as ManualPendingEntry).balanceAmount
+        : (item as Invoice).balance > 0
+        ? (item as Invoice).balance
+        : (item as Invoice).grandTotal - (item as Invoice).paidAmount;
+
+    setPaymentTarget({ type, item });
+    setPaymentFormData({
+      amount: Math.max(0, remainingBalance),
+      method: 'Bank Transfer',
+      date: todayStr,
+      notes: 'Payment received & updated via Client Pendings',
+    });
+  };
+
+  // Submit Payment & Change Status to Completed / Paid
+  const handlePaymentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentTarget) return;
+
+    const payAmt = Number(paymentFormData.amount);
+    if (payAmt <= 0) {
+      alert('Please enter a valid payment amount greater than zero.');
+      return;
+    }
+
+    if (paymentTarget.type === 'manual') {
+      const m = paymentTarget.item as ManualPendingEntry;
+      const newPaid = m.paidAmount + payAmt;
+      const newBal = Math.max(0, m.totalAmount - newPaid);
+      const updated: ManualPendingEntry = {
+        ...m,
+        paidAmount: newPaid,
+        balanceAmount: newBal,
+      };
+      if (onUpdateManualPending) {
+        onUpdateManualPending(updated);
+      }
+    } else {
+      const inv = paymentTarget.item as Invoice;
+      const newPaid = inv.paidAmount + payAmt;
+      const newBal = Math.max(0, inv.grandTotal - newPaid);
+      const newStatus: InvoiceStatus = newBal <= 0 ? 'Paid' : 'Partially Paid';
+      const newPaymentRecord: PaymentRecord = {
+        id: `pay-${Date.now()}`,
+        amount: payAmt,
+        date: paymentFormData.date,
+        method: paymentFormData.method,
+        notes: paymentFormData.notes,
+      };
+      const updatedInvoice: Invoice = {
+        ...inv,
+        paidAmount: newPaid,
+        balance: newBal,
+        status: newStatus,
+        payments: [...(inv.payments || []), newPaymentRecord],
+      };
+      if (onUpdateInvoice) {
+        onUpdateInvoice(updatedInvoice);
+      }
+    }
+
+    setPaymentTarget(null);
   };
 
   // Group invoices AND manual pendings per customer & compute metrics
@@ -345,7 +482,7 @@ export default function ClientPendingPayments({
 
           {/* Add Manual Entry Button */}
           <button
-            onClick={() => setIsManualModalOpen(true)}
+            onClick={handleOpenAddManual}
             className="bg-[#0439C5] hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow-sm cursor-pointer flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
@@ -519,15 +656,49 @@ export default function ClientPendingPayments({
                       </td>
 
                       <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {/* Direct Edit Button */}
+                          <button
+                            onClick={() => {
+                              if (item.manualEntries.length > 0) {
+                                handleOpenEditManual(item.manualEntries[0]);
+                              } else {
+                                setSelectedCustomer(item.customer);
+                              }
+                            }}
+                            className="p-1.5 text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition cursor-pointer"
+                            title="Edit Record Details"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+
+                          {/* Direct Payment / Mark Completed Button */}
+                          <button
+                            onClick={() => {
+                              if (item.manualEntries.length === 1 && item.invoices.length === 0) {
+                                handleOpenPaymentModal('manual', item.manualEntries[0]);
+                              } else if (item.invoices.length === 1 && item.manualEntries.length === 0) {
+                                handleOpenPaymentModal('invoice', item.invoices[0]);
+                              } else {
+                                setSelectedCustomer(item.customer);
+                              }
+                            }}
+                            className="p-1.5 text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition cursor-pointer"
+                            title="Record Payment & Complete"
+                          >
+                            <CreditCard className="w-4 h-4" />
+                          </button>
+
+                          {/* View Breakdown Button */}
                           <button
                             onClick={() => setSelectedCustomer(item.customer)}
                             className="p-1.5 text-slate-600 hover:text-[#0439C5] bg-slate-100 hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                            title="View Breakdown"
+                            title="View Detailed Ledger Breakdown"
                           >
                             <FileText className="w-4 h-4" />
                           </button>
 
+                          {/* WhatsApp Reminder Button */}
                           <button
                             onClick={() => sendWhatsAppReminder(item.customer, item.pendingBalance, item.overdueCount)}
                             className="p-1.5 text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition cursor-pointer"
@@ -546,20 +717,34 @@ export default function ClientPendingPayments({
         </div>
       </div>
 
-      {/* Manual Pending Entry Modal */}
+      {/* Manual Pending Entry Modal (Add & Edit) */}
       {isManualModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100">
             <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-indigo-400" />
-                  <span>Manual Pending Entry</span>
+                  {editingManualEntryId ? (
+                    <>
+                      <Edit className="w-5 h-5 text-indigo-400" />
+                      <span>Edit Manual Pending Entry</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-5 h-5 text-indigo-400" />
+                      <span>Add Manual Pending Entry</span>
+                    </>
+                  )}
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">Record a custom client payment balance</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {editingManualEntryId ? 'Modify existing manual ledger record details' : 'Record a custom client payment balance'}
+                </p>
               </div>
               <button
-                onClick={() => setIsManualModalOpen(false)}
+                onClick={() => {
+                  setIsManualModalOpen(false);
+                  setEditingManualEntryId(null);
+                }}
                 className="text-slate-400 hover:text-white text-xs font-bold bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-lg transition cursor-pointer"
               >
                 ✕
@@ -675,7 +860,10 @@ export default function ClientPendingPayments({
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsManualModalOpen(false)}
+                  onClick={() => {
+                    setIsManualModalOpen(false);
+                    setEditingManualEntryId(null);
+                  }}
                   className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
                 >
                   Cancel
@@ -684,7 +872,145 @@ export default function ClientPendingPayments({
                   type="submit"
                   className="px-5 py-2 bg-[#0439C5] hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow-md cursor-pointer"
                 >
-                  Save Manual Entry
+                  {editingManualEntryId ? 'Update Manual Entry' : 'Save Manual Entry'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Record Payment / Mark Completed Modal */}
+      {paymentTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100">
+            <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-emerald-400" />
+                  <span>Record Payment & Update Status</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Record payment for {paymentTarget.type === 'invoice' ? `Invoice ${(paymentTarget.item as Invoice).number}` : `Manual Entry (${(paymentTarget.item as ManualPendingEntry).clientName})`}
+                </p>
+              </div>
+              <button
+                onClick={() => setPaymentTarget(null)}
+                className="text-slate-400 hover:text-white text-xs font-bold bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-lg transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handlePaymentSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Payment Amount (₹) *</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    min="0.01"
+                    value={paymentFormData.amount || ''}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: parseFloat(e.target.value) || 0 })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const fullBal =
+                        paymentTarget.type === 'manual'
+                          ? (paymentTarget.item as ManualPendingEntry).balanceAmount
+                          : (paymentTarget.item as Invoice).balance > 0
+                          ? (paymentTarget.item as Invoice).balance
+                          : (paymentTarget.item as Invoice).grandTotal - (paymentTarget.item as Invoice).paidAmount;
+                      setPaymentFormData((prev) => ({ ...prev, amount: Math.max(0, fullBal) }));
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-3xxs font-extrabold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2 py-1 rounded-md transition cursor-pointer"
+                  >
+                    Pay Full Balance
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Payment Method</label>
+                  <select
+                    value={paymentFormData.method}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, method: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-600"
+                  >
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="UPI">UPI / GPay</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Payment Date</label>
+                  <input
+                    type="date"
+                    value={paymentFormData.date}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, date: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Notes / Transaction Reference</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Transaction ID #12345"
+                  value={paymentFormData.notes}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, notes: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-600"
+                />
+              </div>
+
+              <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-200 text-xs space-y-1">
+                <div className="flex justify-between font-medium text-slate-700">
+                  <span>Current Paid Amount:</span>
+                  <span>
+                    ₹{(paymentTarget.type === 'manual' ? (paymentTarget.item as ManualPendingEntry).paidAmount : (paymentTarget.item as Invoice).paidAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between font-bold text-emerald-800">
+                  <span>New Total Paid:</span>
+                  <span>
+                    ₹{((paymentTarget.type === 'manual' ? (paymentTarget.item as ManualPendingEntry).paidAmount : (paymentTarget.item as Invoice).paidAmount) + paymentFormData.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between font-black text-rose-600 pt-1 border-t border-emerald-200">
+                  <span>Remaining Balance:</span>
+                  <span>
+                    ₹{Math.max(
+                      0,
+                      (paymentTarget.type === 'manual'
+                        ? (paymentTarget.item as ManualPendingEntry).totalAmount
+                        : (paymentTarget.item as Invoice).grandTotal) -
+                        ((paymentTarget.type === 'manual' ? (paymentTarget.item as ManualPendingEntry).paidAmount : (paymentTarget.item as Invoice).paidAmount) + paymentFormData.amount)
+                    ).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentTarget(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Confirm Payment & Complete</span>
                 </button>
               </div>
             </form>
@@ -746,9 +1072,20 @@ export default function ClientPendingPayments({
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          <div className="text-3xxs text-slate-400">Total: ₹{inv.grandTotal.toFixed(2)} | Paid: ₹{inv.paidAmount.toFixed(2)}</div>
-                          <div className="text-sm font-black text-rose-600">Balance: ₹{inv.balance.toFixed(2)}</div>
+                        <div className="flex items-center gap-3 self-end sm:self-center">
+                          <div className="text-right">
+                            <div className="text-3xxs text-slate-400">Total: ₹{inv.grandTotal.toFixed(2)} | Paid: ₹{inv.paidAmount.toFixed(2)}</div>
+                            <div className="text-sm font-black text-rose-600">Balance: ₹{inv.balance.toFixed(2)}</div>
+                          </div>
+
+                          <button
+                            onClick={() => handleOpenPaymentModal('invoice', inv)}
+                            className="p-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl transition cursor-pointer flex items-center gap-1 text-xs font-bold border border-emerald-200"
+                            title="Record Payment / Mark Paid"
+                          >
+                            <CreditCard className="w-4 h-4 text-emerald-600" />
+                            <span>Pay</span>
+                          </button>
                         </div>
                       </div>
                     );
@@ -783,11 +1120,29 @@ export default function ClientPendingPayments({
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 self-end sm:self-center">
-                          <div className="text-right">
+                        <div className="flex items-center gap-2 self-end sm:self-center">
+                          <div className="text-right mr-1">
                             <div className="text-3xxs text-slate-400">Total: ₹{m.totalAmount.toFixed(2)} | Paid: ₹{m.paidAmount.toFixed(2)}</div>
                             <div className="text-sm font-black text-rose-600">Balance: ₹{m.balanceAmount.toFixed(2)}</div>
                           </div>
+
+                          <button
+                            onClick={() => handleOpenPaymentModal('manual', m)}
+                            className="p-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl transition cursor-pointer flex items-center gap-1 text-xs font-bold border border-emerald-200"
+                            title="Record Payment / Mark Paid"
+                          >
+                            <CreditCard className="w-4 h-4 text-emerald-600" />
+                            <span>Pay</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenEditManual(m)}
+                            className="p-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl transition cursor-pointer flex items-center gap-1 text-xs font-bold border border-indigo-200"
+                            title="Edit Manual Entry"
+                          >
+                            <Edit className="w-4 h-4 text-indigo-600" />
+                            <span>Edit</span>
+                          </button>
 
                           <button
                             onClick={() => {
@@ -795,7 +1150,7 @@ export default function ClientPendingPayments({
                                 onDeleteManualPending(m.id);
                               }
                             }}
-                            className="p-1.5 text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition cursor-pointer"
+                            className="p-2 text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl transition cursor-pointer border border-rose-200"
                             title="Delete Manual Entry"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -808,7 +1163,7 @@ export default function ClientPendingPayments({
             </div>
 
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs text-slate-500 font-medium">Click WhatsApp Reminder on table row to send alert.</span>
+              <span className="text-xs text-slate-500 font-medium">Click Pay or Edit next to any record to update payment details.</span>
               <button
                 onClick={() => setSelectedCustomer(null)}
                 className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer"

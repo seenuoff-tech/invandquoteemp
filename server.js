@@ -688,6 +688,19 @@ app.delete('/api/manual-pendings/:id', async (req, res) => {
   }
 });
 
+app.put('/api/manual-pendings/:id', async (req, res) => {
+  try {
+    const { customerId, clientName, mobile, totalAmount, paidAmount, balanceAmount, dueDate, notes } = req.body;
+    await pool.query(
+      'UPDATE manual_pendings SET customerId=?, clientName=?, mobile=?, totalAmount=?, paidAmount=?, balanceAmount=?, dueDate=?, notes=? WHERE id=?',
+      [customerId || null, clientName, mobile || '', totalAmount, paidAmount || 0, balanceAmount, dueDate || '', notes || '', req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- LEAVE REQUESTS ---
 app.get('/api/leave-requests', async (req, res) => {
   try {
