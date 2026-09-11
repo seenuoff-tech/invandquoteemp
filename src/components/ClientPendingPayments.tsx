@@ -445,10 +445,6 @@ export default function ClientPendingPayments({
               <span>Unlock Pending Payments</span>
             </button>
           </form>
-
-          <p className="text-3xxs text-slate-400">
-            Default Security PIN is <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600 font-mono">2025</code>. Can be updated in Admin Settings.
-          </p>
         </div>
       </div>
     );
