@@ -21,58 +21,90 @@ export const generateDocumentPDF = async (
       let targetElement: HTMLElement;
 
       if (existingElement) {
-        targetElement = existingElement;
+        // Target the inner A4 content wrapper (which is never clipped by flex-1 overflow-y-auto)
+        targetElement = (existingElement.firstElementChild as HTMLElement) || existingElement;
       } else {
         hiddenContainer = window.document.createElement('div');
         hiddenContainer.style.position = 'fixed';
         hiddenContainer.style.left = '-9999px';
         hiddenContainer.style.top = '0';
-        hiddenContainer.style.width = '800px';
+        hiddenContainer.style.width = '820px';
         hiddenContainer.style.backgroundColor = '#ffffff';
         window.document.body.appendChild(hiddenContainer);
 
         root = createRoot(hiddenContainer);
         root.render(
-          <div id="pdf-render-target" style={{ width: '800px', backgroundColor: '#ffffff' }}>
+          <div id="pdf-render-target" style={{ width: '820px', backgroundColor: '#ffffff' }}>
             <PrintView document={document} customers={customers} settings={settings} onClose={() => {}} />
           </div>
         );
 
         // Wait for React component mount & external images to load
-        await new Promise((res) => setTimeout(res, 600));
+        await new Promise((res) => setTimeout(res, 700));
         const el = hiddenContainer.querySelector('#invoice-printable-area') as HTMLElement;
         if (!el) {
           throw new Error('Printable area element not found');
         }
-        targetElement = el;
+        targetElement = (el.firstElementChild as HTMLElement) || el;
       }
 
-      // Temporarily expand scrollable modal parent & target so html-to-image captures 100% of full height (including QR & Bank details)
-      const parentModal = targetElement.parentElement as HTMLElement | null;
-      const origTargetOverflow = targetElement.style.overflow;
-      const origTargetHeight = targetElement.style.height;
-      const origTargetMaxHeight = targetElement.style.maxHeight;
-      const origParentMaxHeight = parentModal ? parentModal.style.maxHeight : '';
-      const origParentOverflow = parentModal ? parentModal.style.overflow : '';
+      // Clone the full unclipped invoice content into a clean off-screen wrapper with zero height/overflow constraints
+      const offscreenWrapper = window.document.createElement('div');
+      offscreenWrapper.style.position = 'fixed';
+      offscreenWrapper.style.left = '0';
+      offscreenWrapper.style.top = '0';
+      offscreenWrapper.style.zIndex = '-9999';
+      offscreenWrapper.style.width = '800px';
+      offscreenWrapper.style.padding = '32px';
+      offscreenWrapper.style.backgroundColor = '#ffffff';
+      offscreenWrapper.style.fontFamily = "'Poppins', sans-serif";
+      offscreenWrapper.style.overflow = 'visible';
+      offscreenWrapper.style.height = 'auto';
+      offscreenWrapper.style.maxHeight = 'none';
 
-      targetElement.style.overflow = 'visible';
-      targetElement.style.height = 'auto';
-      targetElement.style.maxHeight = 'none';
-      if (parentModal) {
-        parentModal.style.maxHeight = 'none';
-        parentModal.style.overflow = 'visible';
-      }
+      const clonedNode = targetElement.cloneNode(true) as HTMLElement;
+      clonedNode.style.overflow = 'visible';
+      clonedNode.style.height = 'auto';
+      clonedNode.style.maxHeight = 'none';
+      offscreenWrapper.appendChild(clonedNode);
+      window.document.body.appendChild(offscreenWrapper);
 
-      const fullWidth = targetElement.scrollWidth || 800;
-      const fullHeight = targetElement.scrollHeight;
+      // Pre-convert all images in the clone to inline Base64 data URLs so external QR codes never taint or fail in html-to-image
+      const imgElements = Array.from(offscreenWrapper.querySelectorAll('img'));
+      await Promise.all(
+        imgElements.map(async (imgEl) => {
+          const src = imgEl.getAttribute('src');
+          if (!src || src.startsWith('data:')) return;
+          try {
+            const response = await fetch(src, { mode: 'cors' });
+            const blobImg = await response.blob();
+            const base64Url = await new Promise<string>((res) => {
+              const reader = new FileReader();
+              reader.onloadend = () => res(reader.result as string);
+              reader.readAsDataURL(blobImg);
+            });
+            imgEl.setAttribute('src', base64Url);
+          } catch (e) {
+            console.warn('Could not inline image for PDF:', src, e);
+          }
+        })
+      );
+
+      // Give browser 200ms to layout the unconstrained clone and decoded base64 images
+      await new Promise((res) => setTimeout(res, 200));
+
+      const fullWidth = offscreenWrapper.scrollWidth || 800;
+      const fullHeight = offscreenWrapper.scrollHeight;
 
       // Convert HTML element to high-res PNG natively via browser engine
-      const dataUrl = await toPng(targetElement, {
+      const dataUrl = await toPng(offscreenWrapper, {
         quality: 0.95,
         pixelRatio: 2,
         backgroundColor: '#ffffff',
         width: fullWidth,
         height: fullHeight,
+        canvasWidth: fullWidth * 2,
+        canvasHeight: fullHeight * 2,
         style: {
           overflow: 'visible',
           height: `${fullHeight}px`,
@@ -80,13 +112,8 @@ export const generateDocumentPDF = async (
         },
       });
 
-      // Restore original styles
-      targetElement.style.overflow = origTargetOverflow;
-      targetElement.style.height = origTargetHeight;
-      targetElement.style.maxHeight = origTargetMaxHeight;
-      if (parentModal) {
-        parentModal.style.maxHeight = origParentMaxHeight;
-        parentModal.style.overflow = origParentOverflow;
+      if (offscreenWrapper.parentNode) {
+        offscreenWrapper.parentNode.removeChild(offscreenWrapper);
       }
 
       const pdf = new jsPDF({
