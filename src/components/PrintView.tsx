@@ -121,7 +121,7 @@ export default function PrintView({ document, customers, settings, onClose }: Pr
         </div>
 
         {/* Professional Printable A4 Page Container */}
-        <div id="invoice-printable-area" className="flex-1 overflow-y-auto p-8 bg-white text-slate-900 font-['Times_New_Roman',_Times,_serif] font-bold print:p-0 print:overflow-visible">
+        <div id="invoice-printable-area" className="flex-1 overflow-y-auto p-8 bg-white text-slate-900 font-['Poppins',_sans-serif] print:p-0 print:overflow-visible" style={{ fontFamily: "'Poppins', sans-serif" }}>
           <div className="max-w-[210mm] mx-auto space-y-5 bg-white print:max-w-none print:w-full">
             
             {/* Header section: Logo & Document Title */}
@@ -201,6 +201,37 @@ export default function PrintView({ document, customers, settings, onClose }: Pr
                     </tr>
                   ))}
                 </tbody>
+                {/* Totals inside table as tfoot */}
+                <tfoot>
+                  <tr className="border-t-2 border-slate-300 bg-slate-50">
+                    <td colSpan={4} className="py-2.5 px-4 text-right font-semibold text-slate-600 text-xs border-r border-slate-200">Subtotal:</td>
+                    <td className="py-2.5 px-4 text-right font-mono font-semibold text-slate-700 text-xs">₹{item.subtotal.toFixed(2)}</td>
+                  </tr>
+                  {item.taxAmount && item.taxAmount > 0 ? (
+                    <tr className="bg-slate-50">
+                      <td colSpan={4} className="py-2 px-4 text-right font-semibold text-slate-500 text-xs border-r border-slate-200">
+                        Tax ({item.taxRate ?? 0}%):
+                      </td>
+                      <td className="py-2 px-4 text-right font-mono font-semibold text-slate-600 text-xs">₹{item.taxAmount.toFixed(2)}</td>
+                    </tr>
+                  ) : null}
+                  <tr className="bg-blue-900 text-white">
+                    <td colSpan={4} className="py-3 px-4 text-right font-bold text-sm border-r border-blue-800">Grand Total:</td>
+                    <td className="py-3 px-4 text-right font-mono font-extrabold text-sm">₹{item.grandTotal.toFixed(2)}</td>
+                  </tr>
+                  {isInvoice && (
+                    <>
+                      <tr className="bg-emerald-50">
+                        <td colSpan={4} className="py-2 px-4 text-right font-semibold text-emerald-700 text-xs border-r border-slate-200">Paid Amount:</td>
+                        <td className="py-2 px-4 text-right font-mono font-bold text-emerald-700 text-xs">₹{invoice.paidAmount.toFixed(2)}</td>
+                      </tr>
+                      <tr className="bg-rose-50 border-t border-rose-200">
+                        <td colSpan={4} className="py-2.5 px-4 text-right font-bold text-rose-700 text-xs border-r border-rose-200">Balance Due:</td>
+                        <td className="py-2.5 px-4 text-right font-mono font-extrabold text-rose-700 text-xs">₹{invoice.balance.toFixed(2)}</td>
+                      </tr>
+                    </>
+                  )}
+                </tfoot>
               </table>
             </div>
 
