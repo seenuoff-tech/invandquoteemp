@@ -287,6 +287,7 @@ export default function PrintView({ document, customers, settings, onClose }: Pr
                 {/* GPay QR Code Box */}
                 <div className="text-center shrink-0 p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
                   <img
+                    crossOrigin="anonymous"
                     src={settings.gpayQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`upi://pay?pa=${settings.upiId || settings.gpayNumber || 'company@upi'}&pn=${encodeURIComponent(settings.companyName)}&am=${item.grandTotal}&cu=INR`)}`}
                     alt="GPay QR Code"
                     className="w-20 h-20 object-contain mx-auto"
