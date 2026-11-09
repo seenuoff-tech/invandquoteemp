@@ -97,6 +97,7 @@ export interface AdminSettings {
 
   leadsPin?: string;
   accountsPin?: string;
+  workReportPin?: string;
   pendingPaymentsPin?: string;
 
   whatsappInvoiceTemplate?: string;

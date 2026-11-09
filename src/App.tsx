@@ -21,6 +21,7 @@ import AdminSettingsPanel from './components/AdminSettings';
 import PrintView from './components/PrintView';
 import EmployeeManagement from './components/EmployeeManagement';
 import TaskManagement from './components/TaskManagement';
+import MonthlyWorkReport from './components/MonthlyWorkReport';
 import TimeTracking from './components/TimeTracking';
 import MeetingSchedule from './components/MeetingSchedule';
 import LoginScreen from './components/LoginScreen';
@@ -630,6 +631,7 @@ export default function App() {
     { name: 'Salaries', icon: DollarSign },
     { name: 'Leave Requests', icon: Calendar },
     { name: 'Tasks', icon: CheckSquare },
+    { name: 'Work Reports', icon: FileText, adminOnly: true },
     { name: 'Time Logs', icon: Clock },
     { name: 'Meetings', icon: Calendar },
     { name: 'Filters', icon: Filter },
@@ -638,7 +640,9 @@ export default function App() {
     { name: 'Settings', icon: Settings },
   ];
 
-  const filteredMenuItems = menuItems.filter(item => (currentUser?.permissions || []).includes(item.name) || currentUser?.role === 'Admin');
+  const filteredMenuItems = menuItems.filter(item =>
+    currentUser?.role === 'Admin' || (!(item as any).adminOnly && (currentUser?.permissions || []).includes(item.name))
+  );
 
   const handleNavClick = (tab: string) => {
     setActiveTab(tab);
@@ -846,6 +850,31 @@ export default function App() {
                 setActiveInvoiceToEdit(inv);
                 setActiveTab('Invoices');
               }}
+            />
+          )}
+
+          {activeTab === 'Dashboard' && currentUser.role !== 'Admin' && (
+            <div className="mt-8">
+              <MonthlyWorkReport
+                tasks={tasks}
+                employees={employees}
+                currentUser={currentUser}
+                mode="self"
+                companyName={settings.companyName}
+                logoUrl={settings.logoUrl || '/logo.png'}
+              />
+            </div>
+          )}
+
+          {activeTab === 'Work Reports' && currentUser.role === 'Admin' && (
+            <MonthlyWorkReport
+              tasks={tasks}
+              employees={employees}
+              currentUser={currentUser}
+              mode="admin"
+              passkey={settings.workReportPin || '2807'}
+              companyName={settings.companyName}
+              logoUrl={settings.logoUrl || '/logo.png'}
             />
           )}
 
